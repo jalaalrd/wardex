@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wardex — DAO Treasury Intelligence</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <nav>
+    <div class="logo">⬡ Wardex</div>
+    <div class="tagline">DAO Treasury Intelligence Agent</div>
+  </nav>
+
+  <main>
+
+    <section class="hero">
+      <h1>Your DAO Treasury,<br/><span>Protected by AI</span></h1>
+      <p>Wardex analyses real on-chain treasury data, forecasts bear market risk, and recommends autonomous actions — before it's too late.</p>
+    </section>
+
+    <section class="search-section">
+      <div class="search-box">
+        <input type="text" id="protocolInput" placeholder="Enter DAO name e.g. uniswap, aave, compound..." />
+        <button id="analyzeBtn">Analyse Treasury</button>
+      </div>
+      <div class="quick-picks">
+        <span>Quick select:</span>
+        <button class="pill" onclick="quickSelect('uniswap')">Uniswap</button>
+        <button class="pill" onclick="quickSelect('aave')">Aave</button>
+        <button class="pill" onclick="quickSelect('compound')">Compound</button>
+        <button class="pill" onclick="quickSelect('makerdao')">MakerDAO</button>
+      </div>
+    </section>
+
+    <div id="loading" class="hidden">
+      <div class="spinner"></div>
+      <p>Wardex agent scanning treasury...</p>
+    </div>
+
+    <div id="error" class="hidden">
+      <p id="errorMsg"></p>
+    </div>
+
+    <section id="results" class="hidden">
+
+      <div class="dao-header">
+        <h2 id="daoName"></h2>
+        <div id="riskBadge" class="risk-badge"></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Treasury Value</div>
+          <div class="stat-value" id="totalValue"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Native Token Exposure</div>
+          <div class="stat-value danger" id="nativeConcentration"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Stablecoin Ratio</div>
+          <div class="stat-value" id="stableRatio"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Estimated Runway</div>
+          <div class="stat-value" id="runwayMonths"></div>
+        </div>
+      </div>
+
+      <div class="risk-section">
+        <h3>Bear Market Scenario</h3>
+        <div class="risk-bar-container">
+          <div class="risk-bar-label">Risk Score</div>
+          <div class="risk-bar-track">
+            <div class="risk-bar-fill" id="riskBarFill"></div>
+          </div>
+          <div class="risk-bar-score" id="riskBarScore"></div>
+        </div>
+        <div class="bear-case">
+          <div class="bear-stat">
+            <div class="bear-label">Current Value</div>
+            <div class="bear-value" id="currentValue"></div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="bear-stat">
+            <div class="bear-label">Bear Case Value (−70%)</div>
+            <div class="bear-value danger" id="bearCaseValue"></div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="bear-stat">
+            <div class="bear-label">Potential Loss</div>
+            <div class="bear-value danger" id="potentialLoss"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="agent-section">
+        <div class="agent-header">
+          <span class="agent-icon">⬡</span>
+          <h3>Wardex Agent Analysis</h3>
+        </div>
+        <div class="agent-recommendation" id="recommendation"></div>
+        <div class="agent-action">
+          <div class="action-label">Recommended Action</div>
+          <div id="actionText"></div>
+          <div class="yield-opportunity">
+            💰 Annual yield opportunity: <strong id="yieldOpportunity"></strong>
+          </div>
+        </div>
+        <button id="executeBtn" class="execute-btn">
+          ⬡ Simulate Agent Execution (Testnet)
+        </button>
+      </div>
+
+      <div id="simulationResult" class="hidden simulation-result">
+        <h4>✓ Agent Execution Simulated</h4>
+        <p id="simulationText"></p>
+        <div class="tx-hash">Testnet TX: <span id="txHash"></span></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Wardex — Built for Campus to Colosseum Hackathon 2026 · Data from DefiLlama</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
