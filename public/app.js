@@ -8,7 +8,7 @@ async function analyzeTreasury(protocol) {
   try {
     // Fetch real treasury data from DefiLlama via our backend
     const res = await fetch(`${API}/api/treasury/${protocol}`);
-    if (!res.ok) throw new Error('DAO not found. Try uniswap, aave, or compound.');
+    if (!res.ok) throw new Error('DAO not found. Try: marinade, jupiter, jito, or raydium.');
     const treasuryData = await res.json();
 
     // Send to Wardex agent for analysis
@@ -91,12 +91,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('executeBtn').addEventListener('click', () => {
     const daoName = document.getElementById('daoName').textContent;
-    const txHash = '0x' + [...Array(64)].map(() =>
-      Math.floor(Math.random() * 16).toString(16)).join('');
+    const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+const txHash = [...Array(88)].map(() =>
+  chars[Math.floor(Math.random() * chars.length)]).join('');
 
     document.getElementById('simulationText').textContent =
       `Wardex agent executed pre-approved rebalancing policy for ${daoName}. ` +
-      `20% of native token holdings converted to USDC on Sepolia testnet. ` +
+      `20% of native token holdings converted to USDC on Solana Devnet. ` +
       `Action taken within governance-approved parameters. No vote required.`;
 
     document.getElementById('txHash').textContent = txHash;
@@ -110,10 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function quickSelect(protocol) {
     const slugMap = {
-      'uniswap': 'uniswap-v3',
-      'aave': 'aave-v3',
-      'compound': 'compound-v3',
-      'makerdao': 'maker'
+      'marinade': 'marinade',
+      'jupiter': 'jupiter',
+      'jito': 'jito',
+      'raydium': 'raydium'
     };
     const slug = slugMap[protocol] || protocol;
     document.getElementById('protocolInput').value = slug;
