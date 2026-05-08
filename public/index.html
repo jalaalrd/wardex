@@ -63,6 +63,66 @@
       </div>
     </section>
 
+    <section class="gap-section" aria-labelledby="gap-heading">
+      <h2 id="gap-heading">The Gap Wardex Fills</h2>
+      <div class="gap-grid">
+        <div class="gap-card gap-card--evm">
+          <div class="gap-card-label">EVM-Only Tools</div>
+          <div class="gap-card-examples">Karpatkey · Avantgarde</div>
+          <ul class="gap-list">
+            <li>Minimum $100M+ treasury</li>
+            <li>Ethereum-only, no Solana</li>
+            <li>Human-managed, not AI-driven</li>
+            <li>Weeks to onboard via governance</li>
+          </ul>
+        </div>
+        <div class="gap-card gap-card--infra">
+          <div class="gap-card-label">Solana Infrastructure</div>
+          <div class="gap-card-examples">Realms · Squads</div>
+          <ul class="gap-list">
+            <li>No active treasury management</li>
+            <li>Every action needs a DAO vote</li>
+            <li>No yield strategy or automation</li>
+            <li>No risk monitoring or alerts</li>
+          </ul>
+        </div>
+        <div class="gap-card gap-card--wardex">
+          <div class="gap-card-label">⬡ Wardex</div>
+          <div class="gap-card-examples">The missing layer</div>
+          <ul class="gap-list">
+            <li>Serves $1M–$50M DAOs on Solana</li>
+            <li>AI agent, policy-based execution</li>
+            <li>One governance vote, continuous management</li>
+            <li>Live Realms + Squads integration</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="flow-section" aria-labelledby="flow-heading">
+      <h2 id="flow-heading">How Wardex Works</h2>
+      <p class="flow-subtitle">DAOs vote on policy once. Wardex executes continuously — no vote per action.</p>
+      <div class="flow-steps" role="list">
+        <div class="flow-step" role="listitem">
+          <div class="flow-num">①</div>
+          <div class="flow-step-title">Vote on Treasury Policy</div>
+          <div class="flow-step-desc">DAO passes one proposal: approved strategies, risk thresholds, concentration limits. No future votes needed for execution.</div>
+        </div>
+        <div class="flow-arrow" aria-hidden="true">→</div>
+        <div class="flow-step" role="listitem">
+          <div class="flow-num">②</div>
+          <div class="flow-step-title">Wardex Monitors 24/7</div>
+          <div class="flow-step-desc">Agent reads live on-chain treasury data via Realms SPL Governance. Tracks native token concentration, idle capital, bear market signals.</div>
+        </div>
+        <div class="flow-arrow" aria-hidden="true">→</div>
+        <div class="flow-step" role="listitem">
+          <div class="flow-num">③</div>
+          <div class="flow-step-title">Auto-Execute Within Mandate</div>
+          <div class="flow-step-desc">When thresholds are met, agent rebalances or deploys yield — within multisig guardrails. Fully non-custodial, no discretionary authority.</div>
+        </div>
+      </div>
+    </section>
+
     <section class="search-section" aria-labelledby="search-heading">
       <h2 id="search-heading" class="sr-only">Analyse a DAO Treasury</h2>
       <div class="search-box">
@@ -94,8 +154,12 @@
 
       <div class="dao-header">
         <h2 id="daoName"></h2>
-        <div id="riskBadge" class="risk-badge" role="status"></div>
+        <div class="dao-header-badges">
+          <div id="riskBadge" class="risk-badge" role="status"></div>
+          <div id="realmsBadge" class="realms-badge hidden" role="status" aria-label="Live Realms on-chain data">⬡ Realms Connected</div>
+        </div>
       </div>
+      <p id="daoContext" class="dao-context hidden" aria-live="polite"></p>
 
       <div class="stats-grid" role="list" aria-label="Treasury statistics">
         <div class="stat-card" role="listitem">
@@ -157,6 +221,7 @@
           <div class="yield-opportunity">
             <span class="yield-dot" aria-hidden="true"></span>
             Annual yield opportunity: <strong id="yieldOpportunity"></strong>
+            <span id="yieldVenueLabel" class="yield-venue hidden">via <strong id="yieldVenueName"></strong></span>
           </div>
         </div>
         <button id="executeBtn" class="execute-btn" aria-label="Simulate agent execution on Solana Devnet">

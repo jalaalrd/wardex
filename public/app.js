@@ -4,6 +4,15 @@ function sanitiseInput(value) {
   return value.toLowerCase().trim().replace(/[^a-z0-9-]/g, '').slice(0, 60);
 }
 
+// Pre-fetch yield rates on page load so the cache is warm for the first analysis
+let cachedYieldRates = null;
+function prefetchYieldRates() {
+  fetch(`${API}/api/yield/rates`)
+    .then(r => r.json())
+    .then(data => { cachedYieldRates = data; })
+    .catch(() => {});
+}
+
 async function analyzeTreasury(protocol) {
   const clean = sanitiseInput(protocol);
   if (!clean || clean.length < 2) {
@@ -17,24 +26,31 @@ async function analyzeTreasury(protocol) {
   announce('Analysing ' + clean + ' treasury data...');
 
   try {
-    const res = await fetch(`${API}/api/treasury/${clean}`);
-    const data = await res.json();
+    // Fetch treasury data and yield rates in parallel
+    const [res, yieldRes] = await Promise.all([
+      fetch(`${API}/api/treasury/${clean}`),
+      fetch(`${API}/api/yield/rates`),
+    ]);
 
+    const data = await res.json();
     if (!res.ok) {
       const msg = data?.error?.message || data?.error || 'DAO not found. Try: marinade, jupiter, jito, or raydium.';
       throw new Error(msg);
     }
 
+    const yieldRates = yieldRes.ok ? await yieldRes.json() : null;
+    if (yieldRates) cachedYieldRates = yieldRates;
+
     const agentRes = await fetch(`${API}/api/agent/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ treasuryData: data })
+      body: JSON.stringify({ treasuryData: data }),
     });
 
     const analysis = await agentRes.json();
     if (!agentRes.ok) throw new Error(analysis?.error?.message || 'Agent analysis failed.');
 
-    displayResults(clean, analysis);
+    displayResults(clean, analysis, yieldRates);
     announce('Analysis complete for ' + (analysis.name || clean) + '. Risk score: ' + analysis.riskScore + ' out of 100.');
 
   } catch (err) {
@@ -45,10 +61,11 @@ async function analyzeTreasury(protocol) {
   }
 }
 
-function displayResults(protocol, a) {
+function displayResults(protocol, a, yieldRates) {
   const daoNameEl = document.getElementById('daoName');
   daoNameEl.textContent = (a.name || protocol.charAt(0).toUpperCase() + protocol.slice(1)) + ' DAO';
 
+  // Risk badge
   const badge = document.getElementById('riskBadge');
   if (a.riskScore >= 70) {
     badge.textContent = '⚠ High Risk';
@@ -61,11 +78,34 @@ function displayResults(protocol, a) {
     badge.className = 'risk-badge low';
   }
 
+  // Realms connected badge
+  const realmsBadge = document.getElementById('realmsBadge');
+  if (realmsBadge) {
+    if (a.realmsConnected) {
+      realmsBadge.classList.remove('hidden');
+    } else {
+      realmsBadge.classList.add('hidden');
+    }
+  }
+
+  // DAO-specific context message
+  const ctxEl = document.getElementById('daoContext');
+  if (ctxEl) {
+    if (a.daoContext) {
+      ctxEl.textContent = a.daoContext;
+      ctxEl.classList.remove('hidden');
+    } else {
+      ctxEl.classList.add('hidden');
+    }
+  }
+
+  // Treasury stats
   document.getElementById('totalValue').textContent = formatMoney(a.totalValue);
   document.getElementById('nativeConcentration').textContent = a.nativeConcentration.toFixed(1) + '%' + (a.estimated ? '*' : '');
   document.getElementById('stableRatio').textContent = a.stableRatio.toFixed(1) + '%';
   document.getElementById('runwayMonths').textContent = a.runwayMonths > 0 ? a.runwayMonths + ' months' : 'Unknown';
 
+  // Risk bar animation
   const fill = document.getElementById('riskBarFill');
   fill.style.width = '0%';
   setTimeout(() => { fill.style.width = a.riskScore + '%'; }, 100);
@@ -81,7 +121,18 @@ function displayResults(protocol, a) {
   document.getElementById('actionText').textContent = a.action;
   document.getElementById('yieldOpportunity').textContent = formatMoney(a.annualYieldOpportunity) + ' / year';
 
-  // Show estimated note if breakdown is estimated
+  // Live yield venue label
+  const venueLabelEl = document.getElementById('yieldVenueLabel');
+  const venueNameEl  = document.getElementById('yieldVenueName');
+  const venue = a.yieldVenue || (yieldRates && yieldRates.best_venue) || null;
+  if (venueLabelEl && venueNameEl && venue) {
+    venueNameEl.textContent = venue;
+    venueLabelEl.classList.remove('hidden');
+  } else if (venueLabelEl) {
+    venueLabelEl.classList.add('hidden');
+  }
+
+  // Estimated note
   const note = document.getElementById('estimatedNote');
   if (note) {
     if (a.estimated) note.classList.remove('hidden');
@@ -93,13 +144,19 @@ function displayResults(protocol, a) {
   btn.textContent = '⬡ Simulate Agent Execution (Solana Devnet)';
   btn.style.opacity = '1';
   btn.disabled = false;
+  btn.setAttribute('aria-label', 'Simulate agent execution on Solana Devnet');
   document.getElementById('simulationResult').classList.add('hidden');
+
+  // Store current analysis for the simulation handler
+  btn._currentAnalysis = a;
 
   showResults();
   setTimeout(() => { daoNameEl.focus(); }, 100);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  prefetchYieldRates();
+
   const daoNameEl = document.getElementById('daoName');
   if (daoNameEl) daoNameEl.setAttribute('tabindex', '-1');
 
@@ -115,20 +172,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  document.getElementById('executeBtn').addEventListener('click', () => {
+  document.getElementById('executeBtn').addEventListener('click', (e) => {
+    const btn = e.currentTarget;
+    const a = btn._currentAnalysis || {};
     const daoName = document.getElementById('daoName').textContent;
+    const venue = a.yieldVenue || (cachedYieldRates && cachedYieldRates.best_venue) || 'Kamino Earn';
+    const apy = a.yieldRate ? (a.yieldRate * 100).toFixed(1) + '%' : '';
     const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
     const txHash = [...Array(88)].map(() => chars[Math.floor(Math.random() * chars.length)]).join('');
 
     document.getElementById('simulationText').textContent =
       `Wardex agent executed pre-approved rebalancing policy for ${daoName}. ` +
-      `20% of native token holdings converted to USDC on Solana Devnet. ` +
-      `Action taken within governance-approved parameters. No vote required.`;
+      `Idle stablecoins deployed into ${venue}${apy ? ' at ' + apy + ' APY' : ''}. ` +
+      `Action taken within governance-approved parameters — no vote required.`;
 
     document.getElementById('txHash').textContent = txHash;
     document.getElementById('simulationResult').classList.remove('hidden');
 
-    const btn = document.getElementById('executeBtn');
     btn.textContent = '✓ Execution Simulated';
     btn.style.opacity = '0.6';
     btn.disabled = true;
@@ -139,12 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function quickSelect(protocol) {
-  const slugMap = {
-    'marinade': 'marinade',
-    'jupiter': 'jupiter',
-    'jito': 'jito',
-    'raydium': 'raydium'
-  };
+  const slugMap = { marinade: 'marinade', jupiter: 'jupiter', jito: 'jito', raydium: 'raydium' };
   const slug = slugMap[protocol] || sanitiseInput(protocol);
   document.getElementById('protocolInput').value = slug;
   analyzeTreasury(slug);
