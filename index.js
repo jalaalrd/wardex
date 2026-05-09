@@ -82,6 +82,7 @@ const DAO_CONFIGS = {
   marinade: {
     realmPubkey: '899YG3yk4F66ZgbNWLHriZHTXSKk9e1kvsKEquW7L6Mo',
     govProgram:  'GovMaiHfpVPw8BAM1mbdzgmSZYDw2tdP32J2fapoQoYs',
+    customGovFork: true,
     nativeToken: 'MNDE',
     stableLabel: 'mSOL/USDC',
     defillamaSlug: 'marinade',
@@ -502,7 +503,7 @@ function buildTreasuryFromProtocol(data, slug, realmsData) {
     govAccountsFound: realmsData.govAccountsFound,
     nativeSol: realmsData.nativeSol,
     realmPubkey: realmsData.realmPubkey,
-  } : { realmsConnected: false, onChain: false };
+  } : { realmsConnected: false, onChain: false, customGovFork: cfg.customGovFork || false };
 
   return {
     name: data.name,
@@ -574,6 +575,7 @@ function analyzeRisk(treasury, liveYieldRate, bestVenue) {
     estimated: treasury.estimatedBreakdown || false,
     realmsConnected: treasury.realmsConnected || false,
     onChain: treasury.onChain || false,
+    customGovFork: treasury.customGovFork || false,
     daoContext: treasury.daoContext || '',
     timestamp: new Date().toISOString(),
   };

@@ -96,6 +96,15 @@ function displayResults(protocol, a, yieldRates) {
     }
   }
 
+  const govForkNote = document.getElementById('govForkNote');
+  if (govForkNote) {
+    if (a.customGovFork) {
+      govForkNote.classList.remove('hidden');
+    } else {
+      govForkNote.classList.add('hidden');
+    }
+  }
+
   // DAO-specific context message
   const ctxEl = document.getElementById('daoContext');
   if (ctxEl) {
@@ -313,9 +322,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!execRes.ok) throw new Error(exec?.error?.message || 'Execution failed');
 
       document.getElementById('simulationText').textContent =
-        `Wardex agent executed pre-approved rebalancing policy for ${daoName}. ` +
-        `Idle stablecoins deployed into ${venue}${apy ? ' at ' + apy + ' APY' : ''}. ` +
-        `Action taken within governance-approved parameters — no vote required.`;
+        `Phase 1: Wardex generated a governance proposal for ${daoName} — ` +
+        `deploy idle stablecoins to ${venue}${apy ? ' at ' + apy + ' APY' : ''}. ` +
+        `In Phase 2 (destination-whitelisted delegate), this would execute automatically within the DAO's approved policy. ` +
+        `The Devnet TX above is proof-of-execution infrastructure — no live Kamino deposit occurred.`;
 
       const txEl = document.getElementById('txHash');
       txEl.textContent = exec.signature;
