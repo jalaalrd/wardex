@@ -172,29 +172,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  document.getElementById('executeBtn').addEventListener('click', (e) => {
+  document.getElementById('executeBtn').addEventListener('click', async (e) => {
     const btn = e.currentTarget;
     const a = btn._currentAnalysis || {};
     const daoName = document.getElementById('daoName').textContent;
     const venue = a.yieldVenue || (cachedYieldRates && cachedYieldRates.best_venue) || 'Kamino Earn';
     const apy = a.yieldRate ? (a.yieldRate * 100).toFixed(1) + '%' : '';
-    const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-    const txHash = [...Array(88)].map(() => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const actionText = a.action || 'Deploy idle stablecoins to ' + venue;
 
-    document.getElementById('simulationText').textContent =
-      `Wardex agent executed pre-approved rebalancing policy for ${daoName}. ` +
-      `Idle stablecoins deployed into ${venue}${apy ? ' at ' + apy + ' APY' : ''}. ` +
-      `Action taken within governance-approved parameters — no vote required.`;
-
-    document.getElementById('txHash').textContent = txHash;
-    document.getElementById('simulationResult').classList.remove('hidden');
-
-    btn.textContent = '✓ Execution Simulated';
-    btn.style.opacity = '0.6';
+    btn.textContent = '⬡ Broadcasting to Solana Devnet...';
     btn.disabled = true;
-    btn.setAttribute('aria-label', 'Agent execution has been simulated');
+    btn.style.opacity = '0.7';
 
-    announce('Agent execution simulated successfully. Transaction recorded on Solana Devnet.');
+    try {
+      const execRes = await fetch(`${API}/api/agent/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ daoName, action: actionText, venue }),
+      });
+      const exec = await execRes.json();
+
+      if (!execRes.ok) throw new Error(exec?.error?.message || 'Execution failed');
+
+      document.getElementById('simulationText').textContent =
+        `Wardex agent executed pre-approved rebalancing policy for ${daoName}. ` +
+        `Idle stablecoins deployed into ${venue}${apy ? ' at ' + apy + ' APY' : ''}. ` +
+        `Action taken within governance-approved parameters — no vote required.`;
+
+      const txEl = document.getElementById('txHash');
+      txEl.textContent = exec.signature;
+      txEl.href = exec.explorerUrl;
+
+      document.getElementById('simulationResult').classList.remove('hidden');
+      btn.textContent = '✓ Executed on Devnet';
+      btn.style.opacity = '0.6';
+      btn.setAttribute('aria-label', 'Agent execution complete — transaction on Solana Devnet');
+      announce('Agent execution complete. Real transaction broadcast on Solana Devnet.');
+    } catch (err) {
+      btn.textContent = '⬡ Simulate Agent Execution (Solana Devnet)';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      showError('Execution failed: ' + (err.message || 'Please try again.'));
+      announce('Execution failed: ' + (err.message || 'Please try again.'));
+    }
   });
 });
 

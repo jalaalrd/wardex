@@ -3,7 +3,7 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
-const { Connection, PublicKey, LAMPORTS_PER_SOL, clusterApiUrl } = require('@solana/web3.js');
+const { Connection, PublicKey, LAMPORTS_PER_SOL, clusterApiUrl, Keypair, Transaction, TransactionInstruction } = require('@solana/web3.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +15,63 @@ const solanaMainnet = new Connection(
   process.env.SOLANA_RPC_URL || clusterApiUrl('mainnet-beta'),
   'confirmed'
 );
+
+// Agent keypair for devnet execution — loaded from env (AGENT_KEYPAIR_SECRET) or generated fresh
+const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
+
+function loadOrGenerateKeypair() {
+  const hex = process.env.AGENT_KEYPAIR_HEX;
+  if (hex && /^[0-9a-f]{128}$/.test(hex)) {
+    try {
+      return Keypair.fromSecretKey(Uint8Array.from(Buffer.from(hex, 'hex')));
+    } catch {
+      console.warn('[agent] Could not load AGENT_KEYPAIR_HEX, generating fresh keypair');
+    }
+  }
+  return Keypair.generate();
+}
+
+const agentKeypair = loadOrGenerateKeypair();
+let agentFunded = false;
+
+async function fundAgentKeypair() {
+  // Check balance first — no need to airdrop if already funded
+  try {
+    const balance = await solanaConnection.getBalance(agentKeypair.publicKey);
+    if (balance >= 5000) { // at least 0.000005 SOL (covers a Memo TX fee)
+      agentFunded = true;
+      console.log('[agent] Devnet keypair ready:', agentKeypair.publicKey.toBase58(), '— balance:', (balance / LAMPORTS_PER_SOL).toFixed(4), 'SOL');
+      return;
+    }
+  } catch {}
+
+  // Request airdrop via RPC
+  try {
+    const sig = await solanaConnection.requestAirdrop(agentKeypair.publicKey, 1 * LAMPORTS_PER_SOL);
+    await solanaConnection.confirmTransaction(sig, 'confirmed');
+    agentFunded = true;
+    console.log('[agent] Devnet keypair funded via airdrop:', agentKeypair.publicKey.toBase58());
+    return;
+  } catch (err) {
+    console.warn('[agent] RPC airdrop failed:', err.message);
+  }
+
+  // Fallback: try faucet.solana.com API
+  try {
+    const faucetRes = await axios.post('https://faucet.solana.com/api/v1/request-airdrop', {
+      pubkey: agentKeypair.publicKey.toBase58(),
+      lamports: 1000000000,
+    }, { timeout: 10000 });
+    if (faucetRes.data && faucetRes.data.signature) {
+      agentFunded = true;
+      console.log('[agent] Devnet keypair funded via faucet:', agentKeypair.publicKey.toBase58());
+    }
+  } catch (err) {
+    console.warn('[agent] Faucet airdrop also failed:', err.message);
+  }
+}
+
+fundAgentKeypair();
 
 // Governance account type bytes that represent treasury-controlling accounts (V1 and V2 variants)
 const GOVERNANCE_ACCOUNT_TYPES = new Set([3, 4, 9, 10, 14, 16, 17, 19]);
@@ -80,7 +137,7 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.llama.fi https://yields.llama.fi; img-src 'self' data:;");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.llama.fi https://yields.llama.fi; img-src 'self' data:; frame-ancestors 'none';");
   if (IS_PROD) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
 });
@@ -350,6 +407,49 @@ app.post('/api/agent/analyze', rateLimit(30, 60000), async (req, res) => {
   } catch (error) {
     console.error('[agent] Analysis error:', error.message);
     return sendError(res, 500, 'Agent analysis failed. Please try again.');
+  }
+});
+
+app.post('/api/agent/execute', rateLimit(10, 60000), async (req, res) => {
+  const { daoName, action, venue } = req.body || {};
+  if (!daoName) return sendError(res, 400, 'daoName is required.');
+
+  if (!agentFunded) {
+    // Retry airdrop if first attempt failed
+    await fundAgentKeypair();
+    if (!agentFunded) {
+      return sendError(res, 503, 'Agent devnet wallet not yet funded. Please try again in a moment.');
+    }
+  }
+
+  try {
+    const memoText = `Wardex agent execution | DAO: ${String(daoName).slice(0, 40)} | Action: ${String(action || 'rebalance').slice(0, 60)} | Venue: ${String(venue || 'Kamino Earn').slice(0, 30)} | ts: ${Date.now()}`;
+
+    const transaction = new Transaction().add(
+      new TransactionInstruction({
+        keys: [],
+        programId: MEMO_PROGRAM_ID,
+        data: Buffer.from(memoText, 'utf-8'),
+      })
+    );
+
+    const { blockhash, lastValidBlockHeight } = await solanaConnection.getLatestBlockhash('confirmed');
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = agentKeypair.publicKey;
+
+    const signature = await solanaConnection.sendTransaction(transaction, [agentKeypair], { skipPreflight: false });
+    await solanaConnection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+
+    res.json({
+      success: true,
+      signature,
+      explorerUrl: `https://explorer.solana.com/tx/${signature}?cluster=devnet`,
+      agentPubkey: agentKeypair.publicKey.toBase58(),
+      memo: memoText,
+    });
+  } catch (err) {
+    console.error('[agent/execute] Transaction failed:', err.message);
+    return sendError(res, 500, 'Devnet transaction failed: ' + err.message);
   }
 });
 

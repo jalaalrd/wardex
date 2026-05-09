@@ -12,64 +12,118 @@ Northern University Alliance: Northumbria · Teesside · Durham · Sunderland
 
 ## The Problem
 
-DAOs collectively manage **$24.5 billion** in treasury assets. Yet:
+DAOs collectively manage **$24.5 billion** in treasury assets — and most of it is at risk.
 
-- **67.3%** of all DAO treasury assets sit in a single native governance token
+- **81.67%** of DAO treasury assets are held in a single native governance token *(Schellinger et al., Blockchain Research Lab, 2023)*
 - **85%** of DAOs hold their entire treasury in one asset
-- Native tokens suffer **70–90% drawdowns** in bear markets
-- Average governance participation is just **17%**
-- Idle stablecoins generate **zero yield** — leaving millions on the table annually
+- Native tokens suffer **70–90% drawdowns** in bear markets — the 2022 crash destroyed tens of billions in DAO purchasing power
+- Idle stablecoins earn **zero yield**, leaving millions on the table annually
+- The only automated treasury tool for mid-tier DAOs — Parcel — shut down in 2025
 
-The 2022 bear market wiped out tens of billions in DAO treasury value that systematic management could have protected. Parcel — the only automated treasury tool for mid-tier DAOs — shut down in 2025. The gap is real and unserved — especially on Solana where DAO treasury tooling lags behind the ecosystem's growth.
+The structural trap: DAOs want to diversify, but every proposal to sell native tokens signals a vote of no confidence. A governance vote *to* diversify can suppress the token price before it even passes.
 
 ---
 
 ## The Solution
 
-Wardex is an AI agent that reads real on-chain treasury data, forecasts bear market risk, and recommends autonomous actions — executed within governance-approved parameters on Solana, without requiring a vote for every transaction.
+Wardex is an AI agent that reads real on-chain treasury data via Solana's SPL Governance (Realms), scores bear market risk, and executes pre-approved treasury actions — without requiring a new governance vote for each transaction.
 
 **The core insight:** DAOs don't need an agent that makes financial decisions for them. They need an agent that executes the financial decisions they've already made but keep failing to act on.
+
+The DAO votes once on a treasury policy. Wardex monitors and executes continuously within that mandate.
 
 ---
 
 ## How It Works
 
 ```
-DefiLlama API → Real treasury data → Risk analysis engine → Agent recommendation → Solana Devnet execution
+Realms SPL Governance → On-chain treasury reads
+DefiLlama API         → Live TVL and protocol data
+DefiLlama Yields API  → Live Kamino / Marginfi APY rates
+Risk Analysis Engine  → Concentration score, bear market scenarios
+Agent Execution       → Real Solana devnet transaction via Memo program
 ```
 
-1. **Data** — pulls live TVL and token breakdown data from DefiLlama
-2. **On-chain** — reads real wallet balances directly from Solana via web3.js
-3. **Analysis** — calculates native token concentration, bear market scenarios, runway estimates
-4. **Intelligence** — generates risk score (0–100) and specific recommendations
-5. **Action** — simulates autonomous rebalancing execution on Solana Devnet
+1. **On-chain read** — reads real governance accounts from Solana mainnet via SPL Governance (Realms) for Marinade, Jito, Jupiter, and Raydium
+2. **TVL data** — pulls live total value from DefiLlama to size the treasury
+3. **Live yield rates** — fetches current Kamino USDC/SOL, Marginfi, and Drift APYs from DefiLlama Yields API
+4. **Risk scoring** — calculates native token concentration, 70% bear market scenario (based on 2022 historical data), runway estimate, and annual yield opportunity
+5. **Agent recommendation** — generates a specific, actionable recommendation with the best available yield venue
+6. **Real execution** — broadcasts a verifiable Solana devnet transaction via the Memo program, returning a real explorer link
+
+---
+
+## The Competitive Gap
+
+| Solution | Chains | Active Management | Min Treasury | Per-Action Vote | AI-Driven |
+|---|---|---|---|---|---|
+| **Karpatkey / kpk** | EVM only | Yes (human) | ~$100M+ | No (policy-based) | No |
+| **Avantgarde / Enzyme** | EVM only | Yes (human + vault) | ~$50M+ | No (policy-based) | No |
+| **Realms (SPL Governance)** | Solana | No | None | Yes — every action | No |
+| **Squads Protocol** | Solana | No (manual via SquadsX) | None | Yes — every action | No |
+| **Castle Finance** | Solana | Limited (3% APY vaults) | None | No | No |
+| **⬡ Wardex** | **Solana** | **Yes (AI agent)** | **$1M+** | **No (policy-based)** | **Yes** |
+
+**There is no Karpatkey for Solana.** Wardex fills that gap — and serves the 6,000 mid-tier DAOs ($1M–$50M) that Karpatkey structurally ignores.
+
+---
+
+## Target DAOs
+
+| DAO | Realm (Mainnet) | Why Now |
+|-----|-----------------|---------|
+| **Jito** | `jjCAwuu...` | JIP-24 routes 100% of Block Engine fees (~$15M+/yr) to DAO treasury. Idle SOL is accumulating with no deployment strategy. |
+| **Marinade** | `899YG3y...` | Passed MIP proposals to diversify away from MNDE concentration. mSOL/USDC treasury needs active management. |
+| **Jupiter** | `2Z5BXuR...` | Treasury locked until 2027 — new governance model being designed. Wardex is the missing execution layer. |
+| **Raydium** | `8JZdqeT...` | On-chain governance launched 2025. Treasury management practices still immature. First-mover opportunity. |
+
+All realm pubkeys verified on Solana mainnet, May 2026.
 
 ---
 
 ## Features
 
-- Real on-chain treasury data for Solana-native protocols
-- Live Solana wallet balance reading via `@solana/web3.js`
+- **Realms SPL Governance integration** — reads real governance accounts and native treasury PDAs from Solana mainnet for all 4 target DAOs
+- **Live yield rates** — fetches current APYs from Kamino (USDC + SOL), Marginfi, and Drift via DefiLlama Yields API
+- **Real devnet execution** — agent broadcasts a verifiable Solana devnet transaction via Memo program; returns a real Solana Explorer link
 - Bear market scenario modelling (70% drawdown based on 2022 historical data)
-- Protocol-specific risk profiles (Marinade, Jupiter, Jito, Raydium)
-- Native token concentration risk scoring
-- Runway estimation scaled by treasury size
-- Annual yield opportunity calculation
-- Agent execution simulation on Solana Devnet
-- Security headers, rate limiting, input sanitisation
+- Risk score 0–100 with native token concentration analysis
+- Runway estimation scaled by treasury size and burn rate
+- Protocol-specific DAO context (Jito Block Engine fees, Marinade MIP diversification, etc.)
+- Security: rate limiting, input sanitisation, CSP headers, HSTS in production
 
 ---
 
-## Solana Ecosystem Focus
+## Architecture: Policy Execution, Not Discretionary Management
 
-| Protocol | Category | Native Exposure | Treasury Focus |
-|----------|----------|----------------|----------------|
-| Marinade | Liquid Staking | 60% | mSOL treasury management |
-| Jupiter | DEX Aggregator | 72% | JUP governance treasury |
-| Jito | MEV / Staking | 63% | JTO treasury protection |
-| Raydium | AMM / DeFi | 75% | RAY concentration risk |
+```
+DAO Governance (Realms)
+        │
+        ▼
+  One-time policy vote
+  ┌──────────────────────────────────────────────┐
+  │  "If native concentration > 70%:             │
+  │   rebalance 20% → stablecoins.               │
+  │   Deploy idle USDC to Kamino Earn.           │
+  │   Monthly report to treasury committee."     │
+  └──────────────────────────────────────────────┘
+        │
+        ▼
+  Wardex Agent (monitors 24/7)
+        │ reads
+        ├─── Realms SPL Governance treasury PDAs (mainnet)
+        ├─── DefiLlama TVL and token breakdowns
+        └─── Live yield rates (Kamino, Marginfi, Drift)
+        │ executes within mandate
+        ├─── Squads multisig spending limits (non-custodial)
+        └─── Real Solana transactions via Memo / SPL programs
+        │
+        ▼
+  No vote per action. Policy decision = community.
+  Execution = agent.
+```
 
-Solana's speed and low transaction costs make it the ideal chain for autonomous treasury agents — sub-second execution, near-zero gas, 24/7 operation.
+This solves the governance paradox: selling native tokens requires a confidence vote that can suppress price. Wardex separates the *strategic decision* (one vote, made calmly) from *execution* (automatic, pre-approved, non-custodial).
 
 ---
 
@@ -78,11 +132,12 @@ Solana's speed and low transaction costs make it the ideal chain for autonomous 
 | Layer | Technology |
 |-------|------------|
 | Backend | Node.js + Express |
-| Blockchain | Solana web3.js (devnet) |
-| Data | DefiLlama API (free, public) |
+| Governance | Solana SPL Governance (Realms) — mainnet |
+| Blockchain | `@solana/web3.js` — mainnet reads + devnet execution |
+| TVL Data | DefiLlama API (free, public) |
+| Yield Data | DefiLlama Yields API — live Kamino, Marginfi, Drift APYs |
 | Frontend | HTML + CSS + Vanilla JS |
 | Deployment | Render |
-| Version Control | GitHub |
 
 ---
 
@@ -96,40 +151,35 @@ cd wardex
 # Install dependencies
 npm install
 
-# Start the server
+# Start the server (generates a devnet agent keypair and airdrops SOL automatically)
 node index.js
 
 # Open in browser
 http://localhost:3000
 
-# Test Solana on-chain integration
-http://localhost:3000/api/solana/wallet/marinade
+# Test Realms on-chain integration (reads Marinade treasury from mainnet)
+http://localhost:3000/api/realms/treasury/marinade
+
+# Test live yield rates
+http://localhost:3000/api/yield/rates
 ```
 
 ---
 
-## Business Model & Path to Revenue
+## Business Model
 
-### The Problem with Existing Solutions
-
-Karpatkey and Avantgarde serve only the top 10 DAOs with $500M+ treasuries. Mid-tier DAOs ($1M–$50M) have no professional management options. Parcel shut down in 2025 due to monetisation difficulties — not lack of demand. Wardex is designed from day one with a sustainable revenue model.
+Parcel and Tally both failed because free governance tooling can't sustain a business. Wardex is designed from day one with a performance-aligned revenue model.
 
 ### Revenue Streams
 
 **1. Performance Fee (primary)**
-Wardex charges 10–15% of yield generated on behalf of the DAO. A $5M treasury with $1M in idle stablecoins at 4.5% APY generates $45,000/year — Wardex takes $4,500–$6,750. Zero cost to DAOs unless Wardex delivers results. Fully aligned incentives.
+10–15% of yield generated. A $5M treasury with $900K in idle stablecoins at 5.5% APY = $49,500/year in yield. Wardex takes $5,000–$7,500. Zero cost to DAOs unless Wardex delivers.
 
 **2. Treasury Policy Setup Fee**
-One-time fee of $500–$2,000 for configuring a DAO's treasury policy parameters, risk thresholds, and governance approvals. Covers onboarding and integration.
+$500–$2,000 one-time for configuring risk parameters, whitelisted protocols, and governance proposal templates. Covers onboarding.
 
 **3. Premium Intelligence Reports**
-Monthly automated treasury health reports with on-chain data, risk trends, and governance recommendations. $200–$500/month per DAO. Positions Wardex as the ongoing financial intelligence layer.
-
-### Target Market
-
-- **Primary:** 6,000 actively managed DAOs globally with $1M–$50M in treasury assets
-- **Beachhead:** Solana ecosystem DAOs — fastest growing, least served by tooling
-- **Expansion:** Cross-chain treasury management as product matures
+$200–$500/month for automated monthly treasury health reports — on-chain data, risk trends, governance recommendations.
 
 ### Unit Economics
 
@@ -137,25 +187,36 @@ Monthly automated treasury health reports with on-chain data, risk trends, and g
 |--------|-------|
 | Target DAO treasury size | $5M average |
 | Idle stablecoins (18%) | $900K |
-| Annual yield at 4.5% | $40,500 |
-| Wardex fee (12.5%) | $5,063/year per DAO |
-| Break-even DAOs | ~20 DAOs |
-| 100 DAO ARR | ~$506,000 |
+| Live USDC APY (Kamino) | 5.5% |
+| Annual yield generated | $49,500 |
+| Wardex fee (12.5%) | $6,188/year per DAO |
+| Break-even DAOs | ~16 DAOs |
+| 100 DAO ARR | ~$619,000 |
 
 ### Why Now
 
-- Parcel's shutdown in 2025 left a direct gap in the market
-- Coinbase Agentic Wallets launched February 2026 — production infrastructure now exists
+- Parcel shut down 2025 — direct gap in mid-tier DAO tooling
+- Tally shut down March 2026 — "no venture business in governance tooling yet"
+- Coinbase Agentic Wallets launched February 2026 — Solana-compatible autonomous execution infrastructure now exists
 - MiCA regulation pushing DAOs toward professional treasury management
-- Solana DAO ecosystem growing rapidly with no dedicated treasury tooling
+- Jito's JIP-24 (passed 2025) routes ~$15M+/yr to DAO treasury with no deployment strategy — immediate customer pain
 
 ---
 
-## The Agent Architecture
+## Roadmap
 
-Wardex is built on **policy execution, not discretionary management**. The DAO votes once on a treasury policy (e.g. "if native token concentration exceeds 70%, rebalance 20% to stablecoins"). Wardex monitors conditions and executes automatically when thresholds are met — within multisig guardrails, non-custodially.
-
-This solves the governance paradox: DAOs can't easily diversify because selling native tokens requires a live vote that feels like a vote of no confidence. Wardex separates the policy decision (one vote, made calmly) from the execution (automatic, pre-approved).
+- [x] Live treasury TVL from DefiLlama
+- [x] Realms SPL Governance integration — real mainnet treasury reads for Marinade, Jito, Jupiter, Raydium
+- [x] Live yield rates from DefiLlama Yields API (Kamino, Marginfi, Drift)
+- [x] Bear market risk scoring and scenario modelling
+- [x] Real agent execution on Solana Devnet — verifiable Memo program transactions
+- [x] Competitive gap UI — policy-based onboarding flow
+- [ ] Real Squads multisig integration for non-custodial execution
+- [ ] Time-series forecasting (ARIMA/ETS) on historical TVL for runway prediction
+- [ ] Governance proposal generation via Realms API
+- [ ] Kamino Earn Vault integration — direct idle stablecoin deployment
+- [ ] Cross-protocol Solana treasury aggregation
+- [ ] Automated monthly treasury health reports
 
 ---
 
@@ -164,24 +225,8 @@ This solves the governance paradox: DAOs can't easily diversify because selling 
 **Jalaaldeen Akinola** — MSc Business Analytics, Newcastle Business School, Northumbria University  
 **Twitter/X:** [@jalaal_tweets](https://twitter.com/jalaal_tweets)
 
-Background in Web3 and financial analytics. Previously founded **Zakatchain** — a blockchain-based charitable giving platform that raised funds for 300+ families in Nigeria — demonstrating real-world experience building decentralised financial products. Wardex bridges MSc forecasting methodology with Solana's autonomous agent infrastructure.
+Background in Web3 and financial analytics. Previously founded **Zakatchain** — a blockchain-based charitable giving platform that raised funds for 300+ families in Nigeria. Wardex bridges MSc forecasting methodology with Solana's autonomous agent infrastructure.
 
 ---
 
-## Roadmap
-
-- [x] Live treasury data from DefiLlama
-- [x] Real Solana on-chain wallet reading via web3.js
-- [x] Bear market risk scoring and scenario modelling
-- [x] Protocol-specific treasury profiles
-- [x] Agent execution simulation on Solana Devnet
-- [ ] Time-series forecasting (ARIMA/ETS) on historical TVL for runway prediction
-- [ ] Real Solana multisig integration for live execution
-- [ ] Governance proposal impact modelling via Realms
-- [ ] Cross-protocol Solana treasury aggregation
-- [ ] Automated monthly treasury health reports
-- [ ] Strategy-agnostic yield module
-
----
-
-*Data sourced from DefiLlama. Built for the Superteam UK x Northumbria University Hackathon 2026.*
+*Treasury risk data: Schellinger, Fiedler & Steinmetz (2023), Blockchain Research Lab. TVL data: DefiLlama. Yield data: DefiLlama Yields API. Built for the Superteam UK x Northumbria University Campus to Colosseum Hackathon 2026.*
