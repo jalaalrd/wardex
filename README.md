@@ -5,8 +5,7 @@
 **Live Demo:** https://wardex.onrender.com  
 **Built by:** [@jalaal_tweets](https://twitter.com/jalaal_tweets)
 
-Built for the Colosseum Frontier Hackathon 2026 — Powered by Superteam UK  
-Northern University Alliance: Northumbria · Teesside · Durham · Sunderland
+Built for the Colosseum Frontier Hackathon 2026 — Powered by Superteam UK
 
 ---
 
@@ -268,4 +267,4 @@ Background in Web3 and financial analytics. Previously founded **Zakatchain** �
 
 ---
 
-*Treasury risk data: Schellinger, Fiedler & Steinmetz (2023), Blockchain Research Lab. TVL data: DefiLlama. Yield data: DefiLlama Yields API. Built for the Superteam UK × Northumbria University Campus to Colosseum Frontier Hackathon 2026.*
+*Treasury risk data: Schellinger, Fiedler & Steinmetz (2023), Blockchain Research Lab. TVL data: DefiLlama. Yield data: DefiLlama Yields API. Built for the Colosseum Frontier Hackathon 2026, powered by Superteam UK.*

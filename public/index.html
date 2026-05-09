@@ -38,33 +38,69 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
+  <div class="announce-bar">
+    <span class="announce-dot" aria-hidden="true"></span>
+    <strong>Built for Colosseum Frontier 2026</strong>
+    <span>·</span>
+    <span>Powered by Superteam UK</span>
+    <span>·</span>
+    <a href="https://github.com/jalaalrd/wardex" target="_blank" rel="noopener noreferrer">View on GitHub →</a>
+  </div>
+
   <header role="banner">
     <nav aria-label="Main navigation">
-      <div class="logo" aria-label="Wardex home">⬡ Wardex</div>
-      <div class="tagline">DAO Treasury Intelligence Agent</div>
-      <a href="https://github.com/jalaalrd/wardex" class="nav-link" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <div class="logo" aria-label="Wardex home">
+        <span class="logo-hex">⬡</span> Wardex
+      </div>
+      <div class="nav-pill" role="list">
+        <a href="#gap-section" role="listitem">The Gap</a>
+        <a href="#how-it-works" role="listitem">How It Works</a>
+        <a href="#analyse" role="listitem">Analyse</a>
+        <a href="#trust-section" role="listitem">Trust Model</a>
+      </div>
+      <div class="nav-actions">
+        <a href="https://github.com/jalaalrd/wardex" class="nav-link" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="#analyse" class="btn-nav-cta">Try Demo</a>
+      </div>
     </nav>
   </header>
 
   <main id="main-content">
 
-    <section class="hero" aria-labelledby="hero-heading">
-      <h1 id="hero-heading">Your DAO Treasury,<br/><span>Protected by AI</span></h1>
-      <p>Wardex analyses real on-chain treasury data, forecasts bear market risk, and recommends autonomous actions — before it's too late.</p>
-      <div class="hero-stats" aria-label="Market statistics">
-        <div class="hero-stat"><strong>$24.5B</strong><span>DAO assets at risk</span></div>
-        <div class="hero-stat"><strong>85%</strong><span>DAOs undiversified</span></div>
-        <div class="hero-stat"><strong>70%</strong><span>avg bear market drop</span></div>
-      </div>
-    </section>
+    <div class="hero-wrapper">
+      <section class="hero" aria-labelledby="hero-heading">
+        <canvas id="heroCanvas" aria-hidden="true"></canvas>
+      <div class="hero-inner">
+          <div class="hero-badge">
+            <span class="announce-dot" aria-hidden="true"></span>
+            Solana-native · Non-custodial · Policy-based execution
+          </div>
+          <h1 id="hero-heading">Your DAO Treasury,<br/><span class="gradient-text">Protected by AI</span></h1>
+          <p class="hero-sub">Wardex reads real on-chain treasury data, scores bear market risk, and executes pre-approved strategies — without a governance vote per action.</p>
+          <div class="hero-ctas">
+            <a href="#analyse" class="btn-primary">Analyse a DAO Treasury</a>
+            <a href="https://github.com/jalaalrd/wardex" class="btn-ghost" target="_blank" rel="noopener noreferrer">View source code →</a>
+          </div>
+          <div class="hero-stats" aria-label="Market statistics">
+            <div class="hero-stat"><strong>$24.5B</strong><span>DAO assets at risk</span></div>
+            <div class="hero-stat"><strong>85%</strong><span>DAOs undiversified</span></div>
+            <div class="hero-stat"><strong>70%</strong><span>avg bear market drop</span></div>
+          </div>
+        </div>
+      </section>
+    </div>
 
-    <section class="gap-section" aria-labelledby="gap-heading">
-      <h2 id="gap-heading">The Gap Wardex Fills</h2>
+    <section class="gap-section" id="gap-section" aria-labelledby="gap-heading">
+      <div class="gap-section-header">
+        <span class="section-label">The problem</span>
+        <h2 id="gap-heading" class="section-heading">The Gap Wardex Fills</h2>
+        <p class="section-sub">Karpatkey manages $4B+ on EVM. Nothing comparable exists on Solana — until now.</p>
+      </div>
       <div class="gap-grid">
         <div class="gap-card gap-card--evm">
           <div class="gap-card-label">EVM-Only Tools</div>
@@ -88,7 +124,7 @@
         </div>
         <div class="gap-card gap-card--wardex">
           <div class="gap-card-label">⬡ Wardex</div>
-          <div class="gap-card-examples">The missing layer</div>
+          <div class="gap-card-examples">$1M–$50M on Solana</div>
           <ul class="gap-list">
             <li>Serves $1M–$50M DAOs on Solana</li>
             <li>AI agent, policy-based execution</li>
@@ -99,22 +135,25 @@
       </div>
     </section>
 
-    <section class="flow-section" aria-labelledby="flow-heading">
-      <h2 id="flow-heading">How Wardex Works</h2>
-      <p class="flow-subtitle">DAOs vote on policy once. Wardex executes continuously — no vote per action.</p>
+    <section class="flow-section" id="how-it-works" aria-labelledby="flow-heading">
+      <div class="flow-header">
+        <span class="section-label">How it works</span>
+        <h2 id="flow-heading" class="section-heading">One vote. Continuous execution.</h2>
+        <p class="section-sub">The DAO decides the strategy. Wardex handles every action that follows.</p>
+      </div>
       <div class="flow-steps" role="list">
         <div class="flow-step" role="listitem">
           <div class="flow-num">①</div>
           <div class="flow-step-title">Vote on Treasury Policy</div>
-          <div class="flow-step-desc">DAO passes one proposal: approved strategies, risk thresholds, concentration limits. No future votes needed for execution.</div>
+          <div class="flow-step-desc">DAO passes one proposal: approved strategies, risk thresholds, concentration limits. That's the last vote required.</div>
         </div>
-        <div class="flow-arrow" aria-hidden="true">→</div>
+        <div class="flow-connector" aria-hidden="true">→</div>
         <div class="flow-step" role="listitem">
           <div class="flow-num">②</div>
           <div class="flow-step-title">Wardex Monitors 24/7</div>
           <div class="flow-step-desc">Agent reads live on-chain treasury data via Realms SPL Governance. Tracks native token concentration, idle capital, bear market signals.</div>
         </div>
-        <div class="flow-arrow" aria-hidden="true">→</div>
+        <div class="flow-connector" aria-hidden="true">→</div>
         <div class="flow-step" role="listitem">
           <div class="flow-num">③</div>
           <div class="flow-step-title">Auto-Execute Within Mandate</div>
@@ -123,20 +162,26 @@
       </div>
     </section>
 
-    <section class="search-section" aria-labelledby="search-heading">
-      <h2 id="search-heading" class="sr-only">Analyse a DAO Treasury</h2>
-      <div class="search-box">
-        <label for="protocolInput" class="sr-only">Enter DAO protocol name</label>
-        <input type="text" id="protocolInput" placeholder="Enter DAO name e.g. marinade, jupiter, jito..." aria-describedby="search-hint" autocomplete="off" spellcheck="false" />
-        <button id="analyzeBtn" aria-label="Analyse treasury">Analyse Treasury</button>
+    <section class="search-section" id="analyse" aria-labelledby="search-heading">
+      <div class="search-wrapper">
+        <div class="search-label-row">
+          <span class="section-label">Live demo</span>
+          <h2 id="search-heading" class="section-heading">Analyse a DAO Treasury</h2>
+          <p class="section-sub">Real on-chain data from Solana mainnet via Realms SPL Governance.</p>
+        </div>
+        <div class="search-box">
+          <label for="protocolInput" class="sr-only">Enter DAO protocol name</label>
+          <input type="text" id="protocolInput" placeholder="Enter DAO name e.g. marinade, jupiter, jito..." aria-describedby="search-hint" autocomplete="off" spellcheck="false" />
+          <button id="analyzeBtn" aria-label="Analyse treasury">Analyse Treasury</button>
+        </div>
+        <p id="search-hint" class="quick-picks">
+          <span>Quick select:</span>
+          <button class="pill" onclick="quickSelect('marinade')" aria-label="Analyse Marinade treasury">Marinade</button>
+          <button class="pill" onclick="quickSelect('jupiter')" aria-label="Analyse Jupiter treasury">Jupiter</button>
+          <button class="pill" onclick="quickSelect('jito')" aria-label="Analyse Jito treasury">Jito</button>
+          <button class="pill" onclick="quickSelect('raydium')" aria-label="Analyse Raydium treasury">Raydium</button>
+        </p>
       </div>
-      <p id="search-hint" class="quick-picks">
-        <span>Quick select:</span>
-        <button class="pill" onclick="quickSelect('marinade')" aria-label="Analyse Marinade treasury">Marinade</button>
-        <button class="pill" onclick="quickSelect('jupiter')" aria-label="Analyse Jupiter treasury">Jupiter</button>
-        <button class="pill" onclick="quickSelect('jito')" aria-label="Analyse Jito treasury">Jito</button>
-        <button class="pill" onclick="quickSelect('raydium')" aria-label="Analyse Raydium treasury">Raydium</button>
-      </p>
     </section>
 
     <div aria-live="polite" aria-atomic="true" id="status-announcer" class="sr-only"></div>
@@ -238,8 +283,12 @@
 
     </section>
 
-    <section class="trust-section" aria-labelledby="trust-heading">
-      <h2 id="trust-heading">Built on Real Data</h2>
+    <section class="trust-section" id="trust-section" aria-labelledby="trust-heading">
+      <div class="trust-header">
+        <span class="section-label">Why trust Wardex</span>
+        <h2 id="trust-heading" class="section-heading">No custody. No discretion. No surprises.</h2>
+        <p class="section-sub">Wardex never holds funds or makes decisions outside what the DAO already approved. Every action is traceable on-chain.</p>
+      </div>
       <div class="trust-grid">
 
         <div class="trust-card">
@@ -263,7 +312,7 @@
             </svg>
           </div>
           <div class="trust-label">Non-Custodial</div>
-          <div class="trust-desc">Wardex never holds your funds. Policy execution only within DAO-approved parameters</div>
+          <div class="trust-desc">Keys stay with your multisig. Wardex can only call deposit() on whitelisted protocol addresses — not transfer to arbitrary wallets</div>
         </div>
 
         <div class="trust-card">
@@ -274,7 +323,7 @@
             </svg>
           </div>
           <div class="trust-label">Solana-Native</div>
-          <div class="trust-desc">Built for Solana's speed. Sub-second execution, near-zero fees</div>
+          <div class="trust-desc">Sub-second finality, &lt;$0.001 per transaction. No EVM bridging, no wrapped assets, no latency tax</div>
         </div>
 
         <div class="trust-card">
@@ -288,13 +337,13 @@
         </div>
 
       </div>
-      <p class="built-by">Built by <a href="https://twitter.com/jalaal_tweets" target="_blank" rel="noopener noreferrer">@jalaal_tweets</a> · MSc Business Analytics, Northumbria University · Previously founded <strong>Zakatchain</strong></p>
+      <p class="built-by">Built by <a href="https://twitter.com/jalaal_tweets" target="_blank" rel="noopener noreferrer">@jalaal_tweets</a> · Previously founded <strong>Zakatchain</strong></p>
     </section>
 
   </main>
 
   <footer role="contentinfo">
-    <p>Wardex — Built for Campus to Colosseum Hackathon 2026 · Powered by Superteam UK</p>
+    <p>Wardex — Built for Colosseum Frontier Hackathon 2026 · Powered by Superteam UK</p>
     <p>Data from <a href="https://defillama.com" target="_blank" rel="noopener noreferrer">DefiLlama</a> · <a href="https://github.com/jalaalrd/wardex" target="_blank" rel="noopener noreferrer">Open Source on GitHub</a></p>
   </footer>
 

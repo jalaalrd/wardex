@@ -162,7 +162,117 @@ function displayResults(protocol, a, yieldRates) {
   setTimeout(() => { daoNameEl.focus(); }, 100);
 }
 
+// ── Hero canvas: animated node network ──────────────────────────────────────
+function initHeroCanvas() {
+  const canvas = document.getElementById('heroCanvas');
+  if (!canvas) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const ctx = canvas.getContext('2d');
+  const NODE_COUNT = 60;
+  const MAX_DIST    = 155;
+  const SPEED       = 0.28;
+  let W, H, nodes, raf;
+
+  function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    W = canvas.width  = rect.width;
+    H = canvas.height = rect.height;
+  }
+
+  function makeNode() {
+    return {
+      x:  Math.random() * W,
+      y:  Math.random() * H,
+      vx: (Math.random() - 0.5) * SPEED,
+      vy: (Math.random() - 0.5) * SPEED,
+      r:  Math.random() < 0.18 ? 2.2 : 1.3,
+      a:  0.25 + Math.random() * 0.45,
+    };
+  }
+
+  function tick() {
+    ctx.clearRect(0, 0, W, H);
+
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx   = nodes[i].x - nodes[j].x;
+        const dy   = nodes[i].y - nodes[j].y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < MAX_DIST) {
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(167,139,250,${(1 - dist / MAX_DIST) * 0.13})`;
+          ctx.lineWidth   = 0.7;
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    for (const n of nodes) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(167,139,250,${n.a})`;
+      ctx.fill();
+
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < -5 || n.x > W + 5) n.vx *= -1;
+      if (n.y < -5 || n.y > H + 5) n.vy *= -1;
+    }
+
+    raf = requestAnimationFrame(tick);
+  }
+
+  resize();
+  nodes = Array.from({ length: NODE_COUNT }, makeNode);
+  tick();
+
+  const ro = new ResizeObserver(() => { resize(); });
+  ro.observe(canvas.parentElement);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { cancelAnimationFrame(raf); }
+    else { tick(); }
+  });
+}
+
+// ── Scroll-triggered card reveals ───────────────────────────────────────────
+function initScrollReveal() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const selector = '.gap-card, .flow-step, .stat-card, .trust-card';
+  const groups   = {};
+
+  document.querySelectorAll(selector).forEach(el => {
+    el.classList.add('reveal');
+    const key = el.parentElement;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(el);
+  });
+
+  Object.values(groups).forEach(siblings => {
+    siblings.forEach((el, i) => {
+      el.style.transitionDelay = (i * 75) + 'ms';
+    });
+  });
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('revealed');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -32px 0px' });
+
+  document.querySelectorAll(selector).forEach(el => io.observe(el));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  initHeroCanvas();
+  initScrollReveal();
   prefetchYieldRates();
 
   const daoNameEl = document.getElementById('daoName');
