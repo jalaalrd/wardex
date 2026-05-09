@@ -78,13 +78,21 @@ function displayResults(protocol, a, yieldRates) {
     badge.className = 'risk-badge low';
   }
 
-  // Realms connected badge
+  // Realms connected / estimated data badges
   const realmsBadge = document.getElementById('realmsBadge');
+  const estimatedBadge = document.getElementById('estimatedBadge');
   if (realmsBadge) {
     if (a.realmsConnected) {
       realmsBadge.classList.remove('hidden');
     } else {
       realmsBadge.classList.add('hidden');
+    }
+  }
+  if (estimatedBadge) {
+    if (!a.realmsConnected) {
+      estimatedBadge.classList.remove('hidden');
+    } else {
+      estimatedBadge.classList.add('hidden');
     }
   }
 

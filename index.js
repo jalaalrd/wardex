@@ -123,6 +123,7 @@ const DAO_CONFIGS = {
   'compound-v3': { nativeRatio: 0.55, stableRatio: 0.32, otherRatio: 0.13 },
 };
 
+app.disable('x-powered-by');
 app.use(cors({
   origin: IS_PROD ? ['https://wardex.onrender.com'] : '*',
   methods: ['GET', 'POST'],
@@ -137,12 +138,20 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.llama.fi https://yields.llama.fi; img-src 'self' data:; frame-ancestors 'none';");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.llama.fi https://yields.llama.fi; img-src 'self' data:; frame-ancestors 'none';");
   if (IS_PROD) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
 });
 
 const rateLimitMap = new Map();
+// Purge stale rate-limit entries every 10 minutes to prevent unbounded memory growth
+setInterval(() => {
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  for (const [key, record] of rateLimitMap) {
+    if (record.start < cutoff) rateLimitMap.delete(key);
+  }
+}, 10 * 60 * 1000).unref();
+
 function rateLimit(maxRequests, windowMs) {
   return (req, res, next) => {
     const key = req.ip || 'unknown';
@@ -170,6 +179,7 @@ function sendError(res, status, message) {
 }
 
 const cache = new Map();
+const CACHE_MAX_SIZE = 200;
 function getCached(key) {
   const entry = cache.get(key);
   if (!entry) return null;
@@ -177,6 +187,11 @@ function getCached(key) {
   return entry.data;
 }
 function setCache(key, data, ttlMs) {
+  // Evict oldest entry if at capacity
+  if (cache.size >= CACHE_MAX_SIZE) {
+    const oldest = cache.keys().next().value;
+    cache.delete(oldest);
+  }
   cache.set(key, { data, ts: Date.now(), ttl: ttlMs || 30 * 60 * 1000 });
 }
 
@@ -397,7 +412,11 @@ app.get('/api/treasury/:protocol', rateLimit(20, 60000), async (req, res) => {
 
 app.post('/api/agent/analyze', rateLimit(30, 60000), async (req, res) => {
   const { treasuryData } = req.body;
-  if (!treasuryData || typeof treasuryData !== 'object') return sendError(res, 400, 'Invalid request body.');
+  if (!treasuryData || typeof treasuryData !== 'object' ||
+      typeof treasuryData.totalValue === 'undefined' ||
+      !treasuryData.tokenBreakdowns || typeof treasuryData.tokenBreakdowns !== 'object') {
+    return sendError(res, 400, 'Invalid request body.');
+  }
   try {
     const yieldRates = getCached('yield:rates');
     const liveYieldRate = yieldRates ? yieldRates.best_usdc : null;
@@ -423,7 +442,8 @@ app.post('/api/agent/execute', rateLimit(10, 60000), async (req, res) => {
   }
 
   try {
-    const memoText = `Wardex agent execution | DAO: ${String(daoName).slice(0, 40)} | Action: ${String(action || 'rebalance').slice(0, 60)} | Venue: ${String(venue || 'Kamino Earn').slice(0, 30)} | ts: ${Date.now()}`;
+    const sanitise = s => String(s).replace(/[\n\r\t|]/g, ' ').trim();
+    const memoText = `Wardex agent execution | DAO: ${sanitise(daoName).slice(0, 40)} | Action: ${sanitise(action || 'rebalance').slice(0, 60)} | Venue: ${sanitise(venue || 'Kamino Earn').slice(0, 30)} | ts: ${Date.now()}`;
 
     const transaction = new Transaction().add(
       new TransactionInstruction({
@@ -438,8 +458,19 @@ app.post('/api/agent/execute', rateLimit(10, 60000), async (req, res) => {
     transaction.feePayer = agentKeypair.publicKey;
 
     const signature = await solanaConnection.sendTransaction(transaction, [agentKeypair], { skipPreflight: false });
-    await solanaConnection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+    await Promise.race([
+      solanaConnection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Confirmation timeout')), 30000)),
+    ]);
 
+    console.log(`[agent/execute] ${new Date().toISOString()} DAO=${sanitise(daoName)} sig=${signature}`);
+    // Proactively refund if balance is getting low
+    solanaConnection.getBalance(agentKeypair.publicKey).then(bal => {
+      if (bal < 0.05 * LAMPORTS_PER_SOL) {
+        console.warn('[agent] Low devnet balance:', bal / LAMPORTS_PER_SOL, 'SOL — attempting refund');
+        fundAgentKeypair();
+      }
+    }).catch(() => {});
     res.json({
       success: true,
       signature,
@@ -449,7 +480,7 @@ app.post('/api/agent/execute', rateLimit(10, 60000), async (req, res) => {
     });
   } catch (err) {
     console.error('[agent/execute] Transaction failed:', err.message);
-    return sendError(res, 500, 'Devnet transaction failed: ' + err.message);
+    return sendError(res, 500, 'Devnet transaction could not be confirmed. Please try again.');
   }
 });
 

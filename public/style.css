@@ -815,6 +815,18 @@ footer a:hover { color: var(--accent); }
   letter-spacing: 0.2px;
 }
 
+.estimated-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  background: rgba(245, 158, 11, 0.08);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  letter-spacing: 0.2px;
+}
+
 .dao-context {
   font-size: 13px;
   color: var(--text2);
