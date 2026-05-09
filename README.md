@@ -63,7 +63,7 @@ Agent Execution       → Real Solana devnet transaction via Memo program
 | **Castle Finance** | Solana | Limited (3% APY vaults) | None | No | No |
 | **⬡ Wardex** | **Solana** | **Yes (AI agent)** | **$1M+** | **No (policy-based)** | **Yes** |
 
-**There is no Karpatkey for Solana.** Wardex fills that gap — serving the 6,000 mid-tier DAOs ($1M–$50M) that Karpatkey structurally ignores, on the chain where the most active governance communities live.
+**There is no Karpatkey for Solana.** Wardex fills that gap — serving the 50+ Solana DAOs with $1M+ treasuries (representing $15–25B in collectively managed assets, per DefiLlama) that Karpatkey structurally ignores, on the chain where the most active governance communities live.
 
 ---
 
