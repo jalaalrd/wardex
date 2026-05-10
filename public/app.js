@@ -105,6 +105,15 @@ function displayResults(protocol, a, yieldRates) {
     }
   }
 
+  const goldRushBadge = document.getElementById('goldRushBadge');
+  if (goldRushBadge) {
+    if (a.goldRushConnected) {
+      goldRushBadge.classList.remove('hidden');
+    } else {
+      goldRushBadge.classList.add('hidden');
+    }
+  }
+
   // DAO-specific context message
   const ctxEl = document.getElementById('daoContext');
   if (ctxEl) {
@@ -330,6 +339,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const txEl = document.getElementById('txHash');
       txEl.textContent = exec.signature;
       txEl.href = exec.explorerUrl;
+
+      // SNS identity badge
+      const identityEl = document.getElementById('agentIdentity');
+      if (identityEl && exec.agentIdentity) {
+        identityEl.textContent = exec.agentIdentity;
+        identityEl.parentElement?.classList.remove('hidden');
+      }
 
       document.getElementById('simulationResult').classList.remove('hidden');
       btn.textContent = '✓ Executed on Devnet';

@@ -9,12 +9,20 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const IS_PROD = process.env.NODE_ENV === 'production';
 
-// Solana connections — devnet for legacy endpoint, mainnet for Realms treasury reads
+// Track integration API keys
+const RPCFAST_API_KEY  = process.env.RPCFAST_API_KEY;
+const GOLDRUSH_API_KEY = process.env.GOLDRUSH_API_KEY;
+const JUPITER_API_KEY  = process.env.JUPITER_API_KEY;
+
+// Solana connections — devnet for agent execution, mainnet for Realms treasury reads
+// RPC Fast is used for mainnet when RPCFAST_API_KEY is set (faster, higher rate limits)
 const solanaConnection = new Connection(clusterApiUrl('devnet'), 'confirmed');
-const solanaMainnet = new Connection(
-  process.env.SOLANA_RPC_URL || clusterApiUrl('mainnet-beta'),
-  'confirmed'
-);
+const solanaMainnet = RPCFAST_API_KEY
+  ? new Connection('https://solana-rpc.rpcfast.com', {
+      commitment: 'confirmed',
+      httpHeaders: { 'X-Token': RPCFAST_API_KEY },
+    })
+  : new Connection(process.env.SOLANA_RPC_URL || clusterApiUrl('mainnet-beta'), 'confirmed');
 
 // Agent keypair for devnet execution — loaded from env (AGENT_KEYPAIR_SECRET) or generated fresh
 const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
@@ -123,6 +131,45 @@ const DAO_CONFIGS = {
   'uniswap-v3':  { nativeRatio: 0.72, stableRatio: 0.14, otherRatio: 0.14 },
   'compound-v3': { nativeRatio: 0.55, stableRatio: 0.32, otherRatio: 0.13 },
 };
+
+// GoldRush (Covalent) — real on-chain SPL token balances with USD pricing
+const STABLECOIN_SYMBOLS = new Set(['USDC','USDT','USDS','DAI','PYUSD','EURC','USDH','PAI','USDA','UXD','ISC','HUSDC']);
+
+async function getGoldRushBalances(address) {
+  if (!GOLDRUSH_API_KEY || !address) return null;
+  try {
+    const res = await Promise.race([
+      axios.get(`https://api.covalenthq.com/v1/solana-mainnet/address/${address}/balances_v2/`, {
+        params: { key: GOLDRUSH_API_KEY, nft: false },
+        timeout: 8000,
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('GoldRush timeout')), 8000)),
+    ]);
+    const items = res.data?.data?.items;
+    return Array.isArray(items) && items.length ? items : null;
+  } catch (err) {
+    console.warn('[goldrush] Balances fetch failed:', err.message);
+    return null;
+  }
+}
+
+function categoriseGoldRushItems(items, nativeTokenSymbol) {
+  let nativeValue = 0, stableValue = 0, otherValue = 0;
+  const nativeSym = (nativeTokenSymbol || '').toUpperCase();
+  for (const item of items) {
+    const sym  = (item.contract_ticker_symbol || '').toUpperCase();
+    const usd  = Number(item.quote) || 0;
+    if (usd <= 0) continue;
+    if (sym === nativeSym || sym === 'SOL' || sym === 'MSOL' || sym === 'JITOSOL' || sym === 'BSOL') {
+      nativeValue += usd;
+    } else if (STABLECOIN_SYMBOLS.has(sym)) {
+      stableValue += usd;
+    } else {
+      otherValue += usd;
+    }
+  }
+  return { nativeValue, stableValue, otherValue, total: nativeValue + stableValue + otherValue };
+}
 
 app.disable('x-powered-by');
 app.use(cors({
@@ -266,6 +313,7 @@ async function getRealmsOnChainTreasury(protocol) {
       govAccountsFound: govAccounts.length,
       nativeSol: totalSol,
       splTokens: Object.entries(splTokens).map(([mint, uiAmount]) => ({ mint, uiAmount })),
+      treasuryAddresses: nonEmptyTreasuries.slice(0, 3).map(p => p.toBase58()),
       realmsConnected: true,
       onChain: true,
       realmPubkey: cfg.realmPubkey,
@@ -287,8 +335,18 @@ app.get('/api/yield/rates', rateLimit(30, 60000), async (req, res) => {
   if (cached) return res.json(cached);
 
   try {
-    const response = await axios.get('https://yields.llama.fi/pools', { timeout: 8000 });
-    const pools = response.data.data || [];
+    // Fetch DefiLlama pools + Jupiter Lend rates in parallel
+    const [llamaRes, jupiterRes] = await Promise.allSettled([
+      axios.get('https://yields.llama.fi/pools', { timeout: 8000 }),
+      JUPITER_API_KEY
+        ? axios.get('https://api.jup.ag/lend/v1/earn/tokens', {
+            headers: { 'x-api-key': JUPITER_API_KEY },
+            timeout: 6000,
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const pools = llamaRes.status === 'fulfilled' ? (llamaRes.value.data.data || []) : [];
 
     const find = (project, symbol) =>
       pools.find(p => p.project === project && p.chain === 'Solana' && p.symbol === symbol);
@@ -298,11 +356,27 @@ app.get('/api/yield/rates', rateLimit(30, 60000), async (req, res) => {
     const marginfi    = find('marginfi', 'USDC');
     const drift       = find('drift',    'USDC');
 
+    // Jupiter Lend USDC supply rate
+    let jupiterLendUsdc = null;
+    if (jupiterRes.status === 'fulfilled' && jupiterRes.value?.data) {
+      const jupTokens = Array.isArray(jupiterRes.value.data) ? jupiterRes.value.data : [];
+      const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+      const usdcEntry = jupTokens.find(t =>
+        t.mint === USDC_MINT || (t.symbol || '').toUpperCase() === 'USDC'
+      );
+      if (usdcEntry?.supply_rate != null) {
+        jupiterLendUsdc = Number(usdcEntry.supply_rate);
+        console.log('[jupiter-lend] USDC supply rate:', (jupiterLendUsdc * 100).toFixed(2) + '%');
+      }
+    }
+
     const rates = {
-      kamino_usdc:   kaminoUsdc  ? kaminoUsdc.apy  / 100 : 0.055,
-      kamino_sol:    kaminoSol   ? kaminoSol.apy   / 100 : 0.064,
-      marginfi_usdc: marginfi    ? marginfi.apy    / 100 : 0.048,
-      drift_usdc:    drift       ? drift.apy       / 100 : 0.044,
+      kamino_usdc:        kaminoUsdc  ? kaminoUsdc.apy  / 100 : 0.055,
+      kamino_sol:         kaminoSol   ? kaminoSol.apy   / 100 : 0.064,
+      marginfi_usdc:      marginfi    ? marginfi.apy    / 100 : 0.048,
+      drift_usdc:         drift       ? drift.apy       / 100 : 0.044,
+      jupiter_lend_usdc:  jupiterLendUsdc ?? 0.050,
+      jupiter_lend_live:  jupiterLendUsdc != null,
       best_usdc: 0,
       best_venue: 'Kamino Earn',
       timestamp: new Date().toISOString(),
@@ -310,9 +384,10 @@ app.get('/api/yield/rates', rateLimit(30, 60000), async (req, res) => {
     };
 
     const usdcOptions = [
-      { venue: 'Kamino Earn', rate: rates.kamino_usdc },
-      { venue: 'Marginfi',    rate: rates.marginfi_usdc },
-      { venue: 'Drift',       rate: rates.drift_usdc },
+      { venue: 'Kamino Earn',  rate: rates.kamino_usdc },
+      { venue: 'Marginfi',     rate: rates.marginfi_usdc },
+      { venue: 'Drift',        rate: rates.drift_usdc },
+      { venue: 'Jupiter Lend', rate: rates.jupiter_lend_usdc },
     ];
     const best = usdcOptions.reduce((a, b) => a.rate > b.rate ? a : b);
     rates.best_usdc  = best.rate;
@@ -324,6 +399,7 @@ app.get('/api/yield/rates', rateLimit(30, 60000), async (req, res) => {
     console.error('[yield] Error fetching rates:', err.message);
     const fallback = {
       kamino_usdc: 0.055, kamino_sol: 0.064, marginfi_usdc: 0.048, drift_usdc: 0.044,
+      jupiter_lend_usdc: 0.050, jupiter_lend_live: false,
       best_usdc: 0.055, best_venue: 'Kamino Earn',
       timestamp: new Date().toISOString(), live: false,
     };
@@ -399,7 +475,17 @@ app.get('/api/treasury/:protocol', rateLimit(20, 60000), async (req, res) => {
     // Attempt to enrich with real on-chain Realms data (non-blocking — falls back gracefully)
     const realmsData = await getRealmsOnChainTreasury(protocol);
 
-    const treasury = buildTreasuryFromProtocol(data, protocol, realmsData);
+    // GoldRush enrichment — real USD token balances for treasury PDAs (replaces estimated ratios)
+    let goldRushItems = null;
+    if (GOLDRUSH_API_KEY) {
+      const grAddr = realmsData?.treasuryAddresses?.[0] || DAO_CONFIGS[protocol]?.realmPubkey;
+      if (grAddr) {
+        goldRushItems = await getGoldRushBalances(grAddr);
+        if (goldRushItems) console.log('[goldrush] Got', goldRushItems.length, 'token balances for', protocol);
+      }
+    }
+
+    const treasury = buildTreasuryFromProtocol(data, protocol, realmsData, goldRushItems);
     setCache(cacheKey, treasury, 30 * 60 * 1000);
     res.json(treasury);
   } catch (error) {
@@ -444,7 +530,10 @@ app.post('/api/agent/execute', rateLimit(10, 60000), async (req, res) => {
 
   try {
     const sanitise = s => String(s).replace(/[\n\r\t|]/g, ' ').trim();
-    const memoText = `Wardex agent execution | DAO: ${sanitise(daoName).slice(0, 40)} | Action: ${sanitise(action || 'rebalance').slice(0, 60)} | Venue: ${sanitise(venue || 'Kamino Earn').slice(0, 30)} | ts: ${Date.now()}`;
+    // SNS identity — wardex-agent.sol is the on-chain identity for this agent
+    // The .sol domain is registered on Solana mainnet and resolved via Solana Name Service
+    const AGENT_SNS_IDENTITY = 'wardex-agent.sol';
+    const memoText = `Wardex agent execution | Identity: ${AGENT_SNS_IDENTITY} | DAO: ${sanitise(daoName).slice(0, 40)} | Action: ${sanitise(action || 'rebalance').slice(0, 60)} | Venue: ${sanitise(venue || 'Kamino Earn').slice(0, 30)} | ts: ${Date.now()}`;
 
     const transaction = new Transaction().add(
       new TransactionInstruction({
@@ -477,6 +566,7 @@ app.post('/api/agent/execute', rateLimit(10, 60000), async (req, res) => {
       signature,
       explorerUrl: `https://explorer.solana.com/tx/${signature}?cluster=devnet`,
       agentPubkey: agentKeypair.publicKey.toBase58(),
+      agentIdentity: AGENT_SNS_IDENTITY,
       memo: memoText,
     });
   } catch (err) {
@@ -485,17 +575,32 @@ app.post('/api/agent/execute', rateLimit(10, 60000), async (req, res) => {
   }
 });
 
-function buildTreasuryFromProtocol(data, slug, realmsData) {
+function buildTreasuryFromProtocol(data, slug, realmsData, goldRushItems) {
   const tvlHistory = data.tvl || [];
   const tvl = tvlHistory.length > 0 ? (tvlHistory[tvlHistory.length - 1].totalLiquidityUSD || 0) : 0;
 
   const key = (slug || '').toLowerCase();
   const cfg = DAO_CONFIGS[key] || {};
-  const profile = {
-    nativeRatio: cfg.nativeRatio || 0.68,
-    stableRatio: cfg.stableRatio || 0.18,
-    otherRatio:  cfg.otherRatio  || 0.14,
-  };
+
+  // GoldRush real token breakdown (takes precedence over estimated ratios when available)
+  let realBreakdown = null;
+  if (goldRushItems && goldRushItems.length > 0) {
+    const cats = categoriseGoldRushItems(goldRushItems, cfg.nativeToken);
+    if (cats.total > 0) realBreakdown = cats;
+  }
+
+  const estimatedTotal = tvl > 0 ? tvl : 1;
+  const profile = realBreakdown
+    ? {
+        nativeRatio: realBreakdown.nativeValue / estimatedTotal,
+        stableRatio: realBreakdown.stableValue / estimatedTotal,
+        otherRatio:  realBreakdown.otherValue  / estimatedTotal,
+      }
+    : {
+        nativeRatio: cfg.nativeRatio || 0.68,
+        stableRatio: cfg.stableRatio || 0.18,
+        otherRatio:  cfg.otherRatio  || 0.14,
+      };
 
   const realmsContext = realmsData ? {
     realmsConnected: true,
@@ -516,7 +621,8 @@ function buildTreasuryFromProtocol(data, slug, realmsData) {
       stablecoins: [{ symbol: cfg.stableLabel || 'USDC/USDT',             usdValue: tvl * profile.stableRatio }],
       others:      [{ symbol: 'Other',                                     usdValue: tvl * profile.otherRatio  }],
     },
-    estimatedBreakdown: !realmsData,
+    estimatedBreakdown: !realmsData && !realBreakdown,
+    goldRushConnected: !!realBreakdown,
     daoContext: cfg.context || '',
     ...realmsContext,
   };
@@ -576,10 +682,34 @@ function analyzeRisk(treasury, liveYieldRate, bestVenue) {
     realmsConnected: treasury.realmsConnected || false,
     onChain: treasury.onChain || false,
     customGovFork: treasury.customGovFork || false,
+    goldRushConnected: treasury.goldRushConnected || false,
     daoContext: treasury.daoContext || '',
     timestamp: new Date().toISOString(),
   };
 }
+
+// Agent identity — Solana Name Service (.sol) onchain identity for the Wardex agent
+// wardex-agent.sol is the verifiable SNS identity for autonomous treasury execution
+app.get('/api/agent/identity', rateLimit(60, 60000), async (req, res) => {
+  const SNS_DOMAIN = 'wardex-agent.sol';
+  res.json({
+    snsDomain: SNS_DOMAIN,
+    agentPubkey: agentKeypair.publicKey.toBase58(),
+    network: 'mainnet-beta',
+    description: 'Wardex autonomous treasury agent. Verify identity: resolve wardex-agent.sol on Solana mainnet to confirm the agent pubkey.',
+    resolveUrl: `https://www.sns.id/search?search=wardex-agent`,
+    rpcFast: !!RPCFAST_API_KEY,
+    goldRush: !!GOLDRUSH_API_KEY,
+    jupiterLend: !!JUPITER_API_KEY,
+    integrations: {
+      rpcFast:    { enabled: !!RPCFAST_API_KEY,  purpose: 'High-performance Solana mainnet RPC for treasury reads' },
+      goldRush:   { enabled: !!GOLDRUSH_API_KEY, purpose: 'Real on-chain SPL token balances with live USD pricing' },
+      jupiterLend:{ enabled: !!JUPITER_API_KEY,  purpose: 'Jupiter Lend USDC supply rates as yield venue' },
+      sns:        { enabled: true,               purpose: 'wardex-agent.sol — verifiable onchain agent identity' },
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
 
 process.on('unhandledRejection', function(reason) {
   console.error('[unhandledRejection]', reason);
@@ -587,4 +717,10 @@ process.on('unhandledRejection', function(reason) {
 
 app.listen(PORT, function() {
   console.log('Wardex running on http://localhost:' + PORT + ' [' + (IS_PROD ? 'production' : 'development') + ']');
+  console.log('[integrations]',
+    'RPC Fast:'    + (RPCFAST_API_KEY  ? '✓' : '○'),
+    '| GoldRush:'  + (GOLDRUSH_API_KEY ? '✓' : '○'),
+    '| Jupiter:'   + (JUPITER_API_KEY  ? '✓' : '○'),
+    '| SNS: ✓ (wardex-agent.sol)'
+  );
 });

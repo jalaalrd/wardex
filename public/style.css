@@ -806,6 +806,19 @@ section {
   font-style: italic;
 }
 
+.goldrush-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border-radius: var(--r-full);
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(251, 146, 60, 0.08);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.22);
+}
+
 .gov-fork-note {
   font-size: 12px;
   color: #fcd34d;
@@ -1055,6 +1068,15 @@ section {
   font-size: 11px;
 }
 .tx-hash a:hover { text-decoration: underline; }
+
+.agent-identity {
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 8px;
+}
+.agent-identity strong { color: var(--accent-light); font-family: 'Courier New', monospace; }
+.agent-identity a { color: var(--accent-light); text-decoration: none; }
+.agent-identity a:hover { text-decoration: underline; }
 
 /* =========================================================
    TRUST / FEATURES GRID
