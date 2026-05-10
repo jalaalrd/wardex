@@ -958,6 +958,43 @@ section {
 .trend-up   { color: #4ade80 !important; }
 .trend-down { color: #f87171 !important; }
 
+/* Venue rates comparison */
+.venue-rates {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.venue-rates-label {
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.venue-rates-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.venue-rate-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  background: rgba(255,255,255,0.03);
+  font-size: 12px;
+}
+.venue-rate-best {
+  border-color: var(--accent-border);
+  background: var(--accent-dim);
+}
+.venue-rate-name { color: var(--text2); }
+.venue-rate-apy  { color: var(--accent-light); font-weight: 700; font-family: var(--font-display); }
+.venue-rate-best .venue-rate-apy { color: #a78bfa; }
+
 /* Governance proposal section */
 .proposal-section {
   margin-top: 16px;

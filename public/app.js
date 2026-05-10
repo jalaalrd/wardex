@@ -109,6 +109,8 @@ function displayResults(protocol, a, yieldRates) {
   if (goldRushBadge) {
     if (a.goldRushConnected) {
       goldRushBadge.classList.remove('hidden');
+      const countEl = document.getElementById('goldRushCount');
+      if (countEl) countEl.textContent = a.goldRushTokenCount || '';
     } else {
       goldRushBadge.classList.add('hidden');
     }
@@ -180,6 +182,25 @@ function displayResults(protocol, a, yieldRates) {
     venueLabelEl.classList.remove('hidden');
   } else if (venueLabelEl) {
     venueLabelEl.classList.add('hidden');
+  }
+
+  // Venue rates comparison
+  const venueRow  = document.getElementById('venueRatesRow');
+  const venueGrid = document.getElementById('venueRatesGrid');
+  if (venueRow && venueGrid && a.allVenueRates) {
+    venueGrid.innerHTML = '';
+    const bestRate = Math.max(...Object.values(a.allVenueRates).map(v => v.rate));
+    for (const [, v] of Object.entries(a.allVenueRates)) {
+      const isBest = v.rate === bestRate;
+      const el = document.createElement('div');
+      el.className = 'venue-rate-item' + (isBest ? ' venue-rate-best' : '');
+      el.innerHTML = `<span class="venue-rate-name">${v.venue}</span><span class="venue-rate-apy">${(v.rate * 100).toFixed(2)}%${v.live ? '' : '*'}</span>`;
+      if (isBest) el.setAttribute('aria-label', v.venue + ' — best rate');
+      venueGrid.appendChild(el);
+    }
+    venueRow.classList.remove('hidden');
+  } else if (venueRow) {
+    venueRow.classList.add('hidden');
   }
 
   // Estimated note

@@ -202,7 +202,7 @@
         <div class="dao-header-badges">
           <div id="riskBadge" class="risk-badge" role="status"></div>
           <div id="realmsBadge" class="realms-badge hidden" role="status" aria-label="Live Realms on-chain data">⬡ Realms Connected</div>
-          <div id="goldRushBadge" class="goldrush-badge hidden" role="status" aria-label="Real token data from GoldRush">◈ GoldRush</div>
+          <div id="goldRushBadge" class="goldrush-badge hidden" role="status" aria-label="Real token data from GoldRush">◈ GoldRush — <span id="goldRushCount"></span> tokens</div>
           <div id="estimatedBadge" class="estimated-badge hidden" role="status" aria-label="Estimated breakdown">~ Estimated Data</div>
           <div id="govForkNote" class="gov-fork-note hidden" role="note">Custom governance fork — treasury value via DefiLlama</div>
         </div>
@@ -279,6 +279,10 @@
             <span class="yield-dot" aria-hidden="true"></span>
             Annual yield opportunity: <strong id="yieldOpportunity"></strong>
             <span id="yieldVenueLabel" class="yield-venue hidden">via <strong id="yieldVenueName"></strong></span>
+          </div>
+          <div id="venueRatesRow" class="venue-rates hidden" aria-label="Available yield venues">
+            <div class="venue-rates-label">All yield venues</div>
+            <div class="venue-rates-grid" id="venueRatesGrid"></div>
           </div>
         </div>
         <button id="executeBtn" class="execute-btn" aria-label="Simulate agent execution on Solana Devnet">

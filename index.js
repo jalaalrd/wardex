@@ -548,7 +548,7 @@ app.post('/api/agent/analyze', rateLimit(30, 60000), async (req, res) => {
     const yieldRates = getCached('yield:rates');
     const liveYieldRate = yieldRates ? yieldRates.best_usdc : null;
     const bestVenue = yieldRates ? yieldRates.best_venue : 'Kamino Earn';
-    const analysis = analyzeRisk(treasuryData, liveYieldRate, bestVenue);
+    const analysis = analyzeRisk(treasuryData, liveYieldRate, bestVenue, yieldRates);
     res.json(analysis);
   } catch (error) {
     console.error('[agent] Analysis error:', error.message);
@@ -669,14 +669,16 @@ function buildTreasuryFromProtocol(data, slug, realmsData, goldRushItems) {
   const key = (slug || '').toLowerCase();
   const cfg = DAO_CONFIGS[key] || {};
 
-  // GoldRush real token breakdown — only overrides estimated ratios when coverage is meaningful.
-  // Governance realm accounts often only hold a fraction of the DAO's full treasury (the rest sits
-  // in derived PDAs or multisigs), so we require GoldRush to see ≥5% of DefiLlama TVL before
-  // trusting it for risk calculations. Below that threshold the badge still shows (integration is
-  // real) but we keep the calibrated estimated ratios for the risk engine.
+  // GoldRush real token breakdown — badge shows whenever GoldRush API returns data (integration
+  // is active). Risk calculations only use GoldRush data when coverage is ≥5% of DefiLlama TVL,
+  // since governance realm accounts hold a fraction of the full treasury. Below that threshold
+  // estimated ratios are used for risk accuracy, but the badge confirms the API is connected.
+  const goldRushActive = !!(goldRushItems && goldRushItems.length > 0);
   let realBreakdown = null;
+  let goldRushTokenCount = 0;
   const MIN_GOLDRUSH_COVERAGE = 0.05; // must cover ≥5% of TVL to replace estimated ratios
-  if (goldRushItems && goldRushItems.length > 0) {
+  if (goldRushActive) {
+    goldRushTokenCount = goldRushItems.length;
     const cats = categoriseGoldRushItems(goldRushItems, cfg.nativeToken);
     if (cats.total > 0 && (tvl <= 0 || cats.total / tvl >= MIN_GOLDRUSH_COVERAGE)) {
       realBreakdown = cats;
@@ -716,14 +718,16 @@ function buildTreasuryFromProtocol(data, slug, realmsData, goldRushItems) {
       others:      [{ symbol: 'Other',                                     usdValue: tvl * profile.otherRatio  }],
     },
     estimatedBreakdown: !realmsData && !realBreakdown,
-    goldRushConnected: !!realBreakdown,
+    goldRushConnected: goldRushActive,
+    goldRushTokenCount,
+    goldRushDataUsed: !!realBreakdown,
     daoContext: cfg.context || '',
     tvlTrend: tvlTrend || null,
     ...realmsContext,
   };
 }
 
-function analyzeRisk(treasury, liveYieldRate, bestVenue) {
+function analyzeRisk(treasury, liveYieldRate, bestVenue, yieldRates) {
   const totalValue = Number(treasury.totalValue) || 0;
   const tokens  = treasury.tokenBreakdowns.ownTokens   || [];
   const stables = treasury.tokenBreakdowns.stablecoins || [];
@@ -786,30 +790,65 @@ function analyzeRisk(treasury, liveYieldRate, bestVenue) {
     onChain: treasury.onChain || false,
     customGovFork: treasury.customGovFork || false,
     goldRushConnected: treasury.goldRushConnected || false,
+    goldRushTokenCount: treasury.goldRushTokenCount || 0,
+    goldRushDataUsed: treasury.goldRushDataUsed || false,
     daoContext: treasury.daoContext || '',
     tvlTrend: treasury.tvlTrend || null,
+    allVenueRates: yieldRates ? {
+      kamino:      { venue: 'Kamino Earn',          rate: yieldRates.kamino_usdc,       live: yieldRates.live },
+      marginfi:    { venue: 'Marginfi',              rate: yieldRates.marginfi_usdc,     live: yieldRates.live },
+      drift:       { venue: 'Drift',                 rate: yieldRates.drift_usdc,        live: yieldRates.live },
+      jupiterLend: { venue: 'Jupiter Lend (JupUSD)', rate: yieldRates.jupiter_lend_usdc, live: yieldRates.jupiter_lend_live },
+    } : null,
     timestamp: new Date().toISOString(),
   };
 }
 
+const { getDomainKeySync, NameRegistryState } = require('@bonfida/spl-name-service');
+
 // Agent identity — Solana Name Service (.sol) onchain identity for the Wardex agent
-// wardex-agent.sol is the verifiable SNS identity for autonomous treasury execution
+// Uses @bonfida/spl-name-service to derive the domain PDA and attempt on-chain resolution
 app.get('/api/agent/identity', rateLimit(60, 60000), async (req, res) => {
-  const SNS_DOMAIN = 'wardex-agent.sol';
+  const SNS_DOMAIN = 'wardex-agent';
+  const SNS_DISPLAY = SNS_DOMAIN + '.sol';
+  const agentPubkey = agentKeypair.publicKey.toBase58();
+
+  // Derive the deterministic domain PDA — this always works, no registration needed
+  const { pubkey: domainPda } = getDomainKeySync(SNS_DOMAIN);
+
+  // Attempt on-chain lookup via RPC Fast (or fallback) to check registration status
+  let snsOwner = null;
+  let snsRegistered = false;
+  let snsAgentMatch = false;
+  try {
+    const { registry } = await NameRegistryState.retrieve(solanaMainnet, domainPda);
+    snsOwner = registry.owner.toBase58();
+    snsRegistered = true;
+    snsAgentMatch = snsOwner === agentPubkey;
+    console.log('[sns] wardex-agent.sol resolved — owner:', snsOwner);
+  } catch (err) {
+    // Domain not yet registered on-chain — PDA is correct, registration pending
+    console.log('[sns] wardex-agent.sol not yet registered on mainnet:', err.message?.slice(0, 60));
+  }
+
   res.json({
-    snsDomain: SNS_DOMAIN,
-    agentPubkey: agentKeypair.publicKey.toBase58(),
+    snsDomain: SNS_DISPLAY,
+    domainPda: domainPda.toBase58(),
+    agentPubkey,
+    snsRegistered,
+    snsOwner,
+    snsAgentMatch,
+    registrationStatus: snsRegistered
+      ? (snsAgentMatch ? 'verified — domain resolves to agent pubkey' : 'registered but owner mismatch')
+      : 'domain PDA derived on-chain; registration pending',
     network: 'mainnet-beta',
-    description: 'Wardex autonomous treasury agent. Verify identity: resolve wardex-agent.sol on Solana mainnet to confirm the agent pubkey.',
-    resolveUrl: `https://www.sns.id/search?search=wardex-agent`,
-    rpcFast: !!RPCFAST_API_KEY,
-    goldRush: !!GOLDRUSH_API_KEY,
-    jupiterLend: !!JUPITER_API_KEY,
+    resolveUrl: `https://www.sns.id/search?search=${SNS_DOMAIN}`,
     integrations: {
       rpcFast:    { enabled: !!RPCFAST_API_KEY,  purpose: 'High-performance Solana mainnet RPC for treasury reads' },
       goldRush:   { enabled: !!GOLDRUSH_API_KEY, purpose: 'Real on-chain SPL token balances with live USD pricing' },
       jupiterLend:{ enabled: !!JUPITER_API_KEY,  purpose: 'Jupiter Lend USDC supply rates as yield venue' },
-      sns:        { enabled: true,               purpose: 'wardex-agent.sol — verifiable onchain agent identity' },
+      claude:     { enabled: !!ANTHROPIC_API_KEY, purpose: 'claude-haiku-4-5 governance proposal generation' },
+      sns:        { enabled: true,               purpose: 'wardex-agent.sol — on-chain identity via @bonfida/spl-name-service' },
     },
     timestamp: new Date().toISOString(),
   });
