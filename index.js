@@ -15,7 +15,8 @@ const GOLDRUSH_API_KEY = process.env.GOLDRUSH_API_KEY;
 const JUPITER_API_KEY  = process.env.JUPITER_API_KEY;
 
 // Solana connections — devnet for agent execution, mainnet for Realms treasury reads
-// RPC Fast is used for mainnet when RPCFAST_API_KEY is set (faster, higher rate limits)
+// RPC Fast powers fast reads (getMultipleAccountsInfo, getParsedTokenAccountsByOwner, getBalance).
+// getProgramAccounts is not available on the free plan so a public fallback handles that call.
 const solanaConnection = new Connection(clusterApiUrl('devnet'), 'confirmed');
 const solanaMainnet = RPCFAST_API_KEY
   ? new Connection('https://solana-rpc.rpcfast.com', {
@@ -23,6 +24,10 @@ const solanaMainnet = RPCFAST_API_KEY
       httpHeaders: { 'X-Token': RPCFAST_API_KEY },
     })
   : new Connection(process.env.SOLANA_RPC_URL || clusterApiUrl('mainnet-beta'), 'confirmed');
+// Free-tier fallback for getProgramAccounts (not included in RPC Fast Start plan)
+const solanaMainnetFallback = new Connection(
+  process.env.SOLANA_RPC_URL || clusterApiUrl('mainnet-beta'), 'confirmed'
+);
 
 // Agent keypair for devnet execution — loaded from env (AGENT_KEYPAIR_SECRET) or generated fresh
 const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
@@ -264,8 +269,9 @@ async function getRealmsOnChainTreasury(protocol) {
     // Fetch governance accounts belonging to this realm.
     // In SPL Governance borsh layout: byte 0 = account_type (u8), bytes 1–32 = realm pubkey.
     // The memcmp filter at offset 1 returns all accounts (governance + token owner records) for this realm.
+    // Use fallback RPC for getProgramAccounts — not available on RPC Fast Start plan
     const rawAccounts = await Promise.race([
-      solanaMainnet.getProgramAccounts(govProgramId, {
+      solanaMainnetFallback.getProgramAccounts(govProgramId, {
         commitment: 'confirmed',
         filters: [{ memcmp: { offset: 1, bytes: realmPk.toBase58() } }],
         dataSlice: { offset: 0, length: 1 }, // only fetch the type byte
@@ -356,17 +362,19 @@ app.get('/api/yield/rates', rateLimit(30, 60000), async (req, res) => {
     const marginfi    = find('marginfi', 'USDC');
     const drift       = find('drift',    'USDC');
 
-    // Jupiter Lend USDC supply rate
+    // Jupiter Lend stablecoin supply rate (JupUSD vault — rates in basis points)
+    // totalRate = supplyRate + rewardsRate; divide by 10000 to get decimal APY
     let jupiterLendUsdc = null;
     if (jupiterRes.status === 'fulfilled' && jupiterRes.value?.data) {
       const jupTokens = Array.isArray(jupiterRes.value.data) ? jupiterRes.value.data : [];
-      const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
-      const usdcEntry = jupTokens.find(t =>
-        t.mint === USDC_MINT || (t.symbol || '').toUpperCase() === 'USDC'
-      );
-      if (usdcEntry?.supply_rate != null) {
-        jupiterLendUsdc = Number(usdcEntry.supply_rate);
-        console.log('[jupiter-lend] USDC supply rate:', (jupiterLendUsdc * 100).toFixed(2) + '%');
+      // Jupiter Lend uses JupUSD (their stablecoin) — pick the first stablecoin vault
+      const stableEntry = jupTokens.find(t => {
+        const sym = (t.asset?.symbol || t.symbol || t.uiSymbol || '').toUpperCase();
+        return sym === 'JUPUSD' || sym === 'USDC' || sym === 'USDT';
+      });
+      if (stableEntry?.totalRate != null) {
+        jupiterLendUsdc = Number(stableEntry.totalRate) / 10000; // bps → decimal
+        console.log('[jupiter-lend] stablecoin totalRate:', (jupiterLendUsdc * 100).toFixed(2) + '% APY (asset:', stableEntry.asset?.symbol || stableEntry.symbol, ')');
       }
     }
 
@@ -387,7 +395,7 @@ app.get('/api/yield/rates', rateLimit(30, 60000), async (req, res) => {
       { venue: 'Kamino Earn',  rate: rates.kamino_usdc },
       { venue: 'Marginfi',     rate: rates.marginfi_usdc },
       { venue: 'Drift',        rate: rates.drift_usdc },
-      { venue: 'Jupiter Lend', rate: rates.jupiter_lend_usdc },
+      { venue: 'Jupiter Lend (JupUSD)', rate: rates.jupiter_lend_usdc },
     ];
     const best = usdcOptions.reduce((a, b) => a.rate > b.rate ? a : b);
     rates.best_usdc  = best.rate;
@@ -582,11 +590,18 @@ function buildTreasuryFromProtocol(data, slug, realmsData, goldRushItems) {
   const key = (slug || '').toLowerCase();
   const cfg = DAO_CONFIGS[key] || {};
 
-  // GoldRush real token breakdown (takes precedence over estimated ratios when available)
+  // GoldRush real token breakdown — only overrides estimated ratios when coverage is meaningful.
+  // Governance realm accounts often only hold a fraction of the DAO's full treasury (the rest sits
+  // in derived PDAs or multisigs), so we require GoldRush to see ≥5% of DefiLlama TVL before
+  // trusting it for risk calculations. Below that threshold the badge still shows (integration is
+  // real) but we keep the calibrated estimated ratios for the risk engine.
   let realBreakdown = null;
+  const MIN_GOLDRUSH_COVERAGE = 0.05; // must cover ≥5% of TVL to replace estimated ratios
   if (goldRushItems && goldRushItems.length > 0) {
     const cats = categoriseGoldRushItems(goldRushItems, cfg.nativeToken);
-    if (cats.total > 0) realBreakdown = cats;
+    if (cats.total > 0 && (tvl <= 0 || cats.total / tvl >= MIN_GOLDRUSH_COVERAGE)) {
+      realBreakdown = cats;
+    }
   }
 
   const estimatedTotal = tvl > 0 ? tvl : 1;
