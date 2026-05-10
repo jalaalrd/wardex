@@ -36,19 +36,24 @@ The DAO votes once on a treasury policy. Wardex monitors and executes continuous
 ## How It Works
 
 ```
-Realms SPL Governance → Real on-chain treasury reads (mainnet)
-DefiLlama API         → Live TVL and protocol data
-DefiLlama Yields API  → Live Kamino / Marginfi / Drift APY rates
-Risk Analysis Engine  → Concentration score, bear market scenarios
-Agent Execution       → Real Solana devnet transaction via Memo program
+RPC Fast               → High-performance Solana mainnet RPC for treasury reads
+Realms SPL Governance  → Real on-chain governance account reads (mainnet)
+GoldRush / Covalent    → Real SPL token balances with live USD pricing
+DefiLlama API          → Live TVL and protocol data
+DefiLlama Yields API   → Live Kamino / Marginfi / Drift APY rates
+Jupiter Lend API       → Live JupUSD vault supply rates as additional yield venue
+Risk Analysis Engine   → Concentration score, bear market scenarios
+SNS Identity           → wardex-agent.sol — verifiable onchain agent identity
+Agent Execution        → Real Solana devnet transaction via Memo program
 ```
 
-1. **On-chain read** — reads real governance accounts from Solana mainnet via SPL Governance (Realms) for Marinade, Jito, Jupiter, and Raydium
+1. **On-chain read** — reads real governance accounts from Solana mainnet via SPL Governance (Realms) for Marinade, Jito, Jupiter, and Raydium. Powered by RPC Fast for speed; `getProgramAccounts` falls back to a public RPC (not available on RPC Fast Start plan)
 2. **TVL data** — pulls live total value from DefiLlama to size the treasury
-3. **Live yield rates** — fetches current Kamino USDC/SOL, Marginfi, and Drift APYs from DefiLlama Yields API
-4. **Risk scoring** — calculates native token concentration, 70% bear market scenario (based on 2022 historical data), runway estimate, and annual yield opportunity
-5. **Agent recommendation** — generates a specific, actionable recommendation with the best available yield venue
-6. **Real execution** — broadcasts a verifiable Solana devnet transaction via the Memo program, returning a real Solana Explorer link
+3. **Token balances** — fetches real SPL token balances and live USD pricing via GoldRush (Covalent); replaces estimated ratios when coverage is ≥5% of TVL
+4. **Live yield rates** — fetches current Kamino USDC/SOL, Marginfi, Drift, and Jupiter Lend APYs; best venue is selected automatically
+5. **Risk scoring** — calculates native token concentration, 70% bear market scenario (based on 2022 historical data), runway estimate, and annual yield opportunity
+6. **Agent recommendation** — generates a specific, actionable recommendation with the best available yield venue
+7. **Real execution** — broadcasts a verifiable Solana devnet transaction via the Memo program with the agent's `wardex-agent.sol` SNS identity embedded, returning a real Solana Explorer link
 
 ---
 
@@ -125,9 +130,10 @@ DAO Governance (Realms)
         ▼
   Wardex Agent (monitors 24/7)
         │ reads
-        ├─── Realms SPL Governance treasury PDAs (mainnet)
+        ├─── Realms SPL Governance treasury PDAs (mainnet, via RPC Fast)
+        ├─── GoldRush real SPL token balances + USD pricing
         ├─── DefiLlama TVL and token breakdowns
-        └─── Live yield rates (Kamino, Marginfi, Drift)
+        └─── Live yield rates (Kamino, Marginfi, Drift, Jupiter Lend)
         │ executes within mandate
         ├─── Phase 1: Realms proposal generation
         ├─── Phase 2: Squads destination-whitelisted delegate
@@ -145,7 +151,10 @@ This solves the governance paradox: selling native tokens requires a confidence 
 ## Features
 
 - **Realms SPL Governance integration** — reads real governance accounts and native treasury PDAs from Solana mainnet for all 4 target DAOs
-- **Live yield rates** — fetches current APYs from Kamino (USDC + SOL), Marginfi, and Drift via DefiLlama Yields API
+- **RPC Fast mainnet reads** — all Solana mainnet calls (getMultipleAccountsInfo, getParsedTokenAccountsByOwner, getBalance) routed through RPC Fast for speed and reliability
+- **GoldRush token balances** — real SPL token balances with live USD pricing via Covalent's GoldRush API; replaces estimated ratios when meaningful coverage is detected
+- **Jupiter Lend yield rates** — live JupUSD vault supply rates from Jupiter Lend API alongside Kamino, Marginfi, and Drift; best venue selected automatically
+- **SNS agent identity** — `wardex-agent.sol` embedded in every Memo program transaction; `/api/agent/identity` endpoint exposes the agent's verifiable Solana Name Service identity
 - **Real devnet execution** — agent broadcasts a verifiable Solana devnet transaction via Memo program; returns a real Solana Explorer link
 - Bear market scenario modelling (70% drawdown based on 2022 historical data)
 - Risk score 0–100 with native token concentration analysis
@@ -163,8 +172,12 @@ This solves the governance paradox: selling native tokens requires a confidence 
 | Backend | Node.js + Express |
 | Governance | Solana SPL Governance (Realms) — mainnet reads |
 | Blockchain | `@solana/web3.js` — mainnet reads + devnet execution |
+| RPC | RPC Fast — high-performance Solana mainnet RPC |
+| Token Data | GoldRush (Covalent) — real SPL token balances with live USD pricing |
 | TVL Data | DefiLlama API (free, public) |
 | Yield Data | DefiLlama Yields API — live Kamino, Marginfi, Drift APYs |
+| Yield Data | Jupiter Lend API — live JupUSD vault supply rates |
+| Agent Identity | Solana Name Service (SNS) — `wardex-agent.sol` onchain agent identity |
 | Frontend | HTML + CSS + Vanilla JS |
 | Deployment | Render |
 
@@ -180,11 +193,25 @@ cd wardex
 # Install dependencies
 npm install
 
-# Add your agent keypair (optional — server generates + airdrops one automatically)
-echo "AGENT_KEYPAIR_HEX=<your_hex_encoded_64_byte_secret>" > .env
+# Configure env vars
+cat > .env << 'EOF'
+# Required for agent devnet execution (optional — auto-generated if missing)
+AGENT_KEYPAIR_HEX=<your_hex_encoded_64_byte_secret>
+
+# RPC Fast — high-performance Solana mainnet RPC (rpcfast.com → Mainnet RPC application)
+RPCFAST_API_KEY=
+
+# GoldRush / Covalent — real SPL token balances with USD pricing (goldrush.dev)
+GOLDRUSH_API_KEY=
+
+# Jupiter Developer Platform — Jupiter Lend yield rates (developers.jup.ag)
+JUPITER_API_KEY=
+EOF
 
 # Start the server
 node index.js
+# Startup log confirms active integrations:
+# [integrations] RPC Fast:✓ | GoldRush:✓ | Jupiter:✓ | SNS: ✓ (wardex-agent.sol)
 
 # Open in browser
 http://localhost:3000
@@ -192,13 +219,16 @@ http://localhost:3000
 # Test Realms on-chain integration (reads Jito treasury from mainnet)
 http://localhost:3000/api/realms/treasury/jito
 
-# Test live yield rates
+# Test live yield rates (includes Jupiter Lend)
 http://localhost:3000/api/yield/rates
 
-# Test agent execution (real devnet TX)
+# Test agent identity (SNS + integration status)
+http://localhost:3000/api/agent/identity
+
+# Test agent execution (real devnet TX with wardex-agent.sol identity in memo)
 curl -X POST http://localhost:3000/api/agent/execute \
   -H 'Content-Type: application/json' \
-  -d '{"daoName":"Jito DAO","action":"Deploy idle SOL to Kamino Earn","venue":"Kamino Earn"}'
+  -d '{"daoName":"Jito DAO","action":"Deploy idle SOL to Jupiter Lend","venue":"Jupiter Lend (JupUSD)"}'
 ```
 
 ---
@@ -245,13 +275,17 @@ $200–$500/month for automated monthly treasury health reports — on-chain dat
 - [x] Live treasury TVL from DefiLlama
 - [x] Realms SPL Governance integration — real mainnet treasury reads for Marinade, Jito, Jupiter, Raydium
 - [x] Live yield rates from DefiLlama Yields API (Kamino, Marginfi, Drift)
+- [x] Jupiter Lend API — live JupUSD vault supply rates as additional yield venue
+- [x] RPC Fast mainnet RPC — high-performance Solana reads, getProgramAccounts via public fallback
+- [x] GoldRush (Covalent) — real SPL token balances with live USD pricing
+- [x] SNS agent identity — wardex-agent.sol embedded in all agent transactions
 - [x] Bear market risk scoring and scenario modelling
 - [x] Real agent execution on Solana Devnet — verifiable Memo program transactions
 - [x] Competitive gap UI — policy-based onboarding flow
 - [x] Non-custodial trust model — phased architecture, destination whitelist design
 - [ ] Realms governance proposal generation — draft and submit proposals on behalf of DAOs
 - [ ] Squads destination-whitelist delegate integration — Phase 2 execution model
-- [ ] SPL token account reads per governance PDA — replace estimated breakdowns with real token balances
+- [ ] Full SPL token account reads per governance PDA — GoldRush currently reads realm pubkey; extend to all derived treasury PDAs
 - [ ] Time-series forecasting (ARIMA/ETS) on historical TVL for runway prediction
 - [ ] Kamino Earn Vault integration — direct idle stablecoin deployment via CPI
 - [ ] Automated monthly treasury health reports
@@ -264,6 +298,21 @@ $200–$500/month for automated monthly treasury health reports — on-chain dat
 **Twitter/X:** [@jalaal_tweets](https://twitter.com/jalaal_tweets)
 
 Background in Web3 and financial analytics. Previously founded **Zakatchain** — a blockchain-based charitable giving platform that raised funds for 300+ families in Nigeria. Wardex bridges MSc forecasting methodology with Solana's autonomous agent infrastructure.
+
+---
+
+## Sponsor Track Integrations
+
+Wardex integrates four sponsor stacks as core infrastructure, each solving a real gap in the product:
+
+| Track | Sponsor | Integration | Endpoint |
+|---|---|---|---|
+| **RPC Fast** | RPC Fast | High-performance Solana mainnet RPC — all treasury reads route through `solana-rpc.rpcfast.com` when `RPCFAST_API_KEY` is set | All `/api/treasury/*` reads |
+| **Not Your Regular Bounty** | Jupiter | Jupiter Lend API (`api.jup.ag/lend/v1/earn/tokens`) — live JupUSD vault APY as an additional yield deployment venue | `/api/yield/rates` → `jupiter_lend_usdc` |
+| **Build with GoldRush** | Covalent | GoldRush Balances API (`api.covalenthq.com/v1/solana-mainnet/...`) — real on-chain SPL token balances with live USD pricing for treasury PDAs | `/api/treasury/:protocol` → `goldRushConnected` |
+| **SNS Identity** | Bonfida | `wardex-agent.sol` embedded in every Memo program transaction; `/api/agent/identity` exposes the agent's SNS domain and verify link | `/api/agent/identity` |
+
+All integration keys are optional — Wardex falls back gracefully when keys are not set, keeping the core demo functional.
 
 ---
 
