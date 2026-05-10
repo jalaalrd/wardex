@@ -39,21 +39,25 @@ The DAO votes once on a treasury policy. Wardex monitors and executes continuous
 RPC Fast               → High-performance Solana mainnet RPC for treasury reads
 Realms SPL Governance  → Real on-chain governance account reads (mainnet)
 GoldRush / Covalent    → Real SPL token balances with live USD pricing
-DefiLlama API          → Live TVL and protocol data
+DefiLlama API          → Live TVL and 90-day historical TVL array
 DefiLlama Yields API   → Live Kamino / Marginfi / Drift APY rates
 Jupiter Lend API       → Live JupUSD vault supply rates as additional yield venue
-Risk Analysis Engine   → Concentration score, bear market scenarios
+TVL Trend Engine       → 30d/90d % change + slope from historical TVL data
+Risk Analysis Engine   → Concentration score, 3-scenario bear market modelling
+Claude API (Haiku)     → AI-generated Realms governance proposals on demand
 SNS Identity           → wardex-agent.sol — verifiable onchain agent identity
 Agent Execution        → Real Solana devnet transaction via Memo program
 ```
 
 1. **On-chain read** — reads real governance accounts from Solana mainnet via SPL Governance (Realms) for Marinade, Jito, Jupiter, and Raydium. Powered by RPC Fast for speed; `getProgramAccounts` falls back to a public RPC (not available on RPC Fast Start plan)
-2. **TVL data** — pulls live total value from DefiLlama to size the treasury
-3. **Token balances** — fetches real SPL token balances and live USD pricing via GoldRush (Covalent); replaces estimated ratios when coverage is ≥5% of TVL
-4. **Live yield rates** — fetches current Kamino USDC/SOL, Marginfi, Drift, and Jupiter Lend APYs; best venue is selected automatically
-5. **Risk scoring** — calculates native token concentration, 70% bear market scenario (based on 2022 historical data), runway estimate, and annual yield opportunity
-6. **Agent recommendation** — generates a specific, actionable recommendation with the best available yield venue
-7. **Real execution** — broadcasts a verifiable Solana devnet transaction via the Memo program with the agent's `wardex-agent.sol` SNS identity embedded, returning a real Solana Explorer link
+2. **TVL data** — pulls live total value and full 90-day historical TVL array from DefiLlama
+3. **TVL trend analysis** — computes 30d/90d % change and daily slope from the historical array; shown as a directional indicator in the stats grid
+4. **Token balances** — fetches real SPL token balances and live USD pricing via GoldRush (Covalent); replaces estimated ratios when coverage is ≥5% of TVL
+5. **Live yield rates** — fetches current Kamino USDC/SOL, Marginfi, Drift, and Jupiter Lend APYs; best venue is selected automatically
+6. **Risk scoring** — calculates native token concentration, three bear market scenarios (Base −40%, Moderate −60%, Severe −80% based on 2022 historical data), runway estimate, and annual yield opportunity
+7. **Governance proposal generation** — Claude Haiku generates a fully-formed, Realms-ready governance proposal from the treasury analysis; falls back to a structured template when the API key is absent
+8. **Agent recommendation** — generates a specific, actionable recommendation with the best available yield venue
+9. **Real execution** — broadcasts a verifiable Solana devnet transaction via the Memo program with the agent's `wardex-agent.sol` SNS identity embedded, returning a real Solana Explorer link
 
 ---
 
@@ -154,9 +158,11 @@ This solves the governance paradox: selling native tokens requires a confidence 
 - **RPC Fast mainnet reads** — all Solana mainnet calls (getMultipleAccountsInfo, getParsedTokenAccountsByOwner, getBalance) routed through RPC Fast for speed and reliability
 - **GoldRush token balances** — real SPL token balances with live USD pricing via Covalent's GoldRush API; replaces estimated ratios when meaningful coverage is detected
 - **Jupiter Lend yield rates** — live JupUSD vault supply rates from Jupiter Lend API alongside Kamino, Marginfi, and Drift; best venue selected automatically
+- **Historical TVL trend analysis** — 30d/90d % change and daily slope computed from DefiLlama's historical TVL array; displayed as a directional indicator in the stats grid
+- **Multi-scenario bear market modelling** — three named scenarios (Base −40%, Moderate −60%, Severe −80%) replace the single 70% estimate, shown side-by-side in the risk card
+- **Claude API governance proposals** — `POST /api/agent/proposal` calls Claude Haiku to generate a fully-formed Realms governance proposal from live treasury data; structured template fallback when API key is absent
 - **SNS agent identity** — `wardex-agent.sol` embedded in every Memo program transaction; `/api/agent/identity` endpoint exposes the agent's verifiable Solana Name Service identity
 - **Real devnet execution** — agent broadcasts a verifiable Solana devnet transaction via Memo program; returns a real Solana Explorer link
-- Bear market scenario modelling (70% drawdown based on 2022 historical data)
 - Risk score 0–100 with native token concentration analysis
 - Runway estimation scaled by treasury size and burn rate
 - Estimated vs. on-chain data clearly labelled in the UI
@@ -174,9 +180,10 @@ This solves the governance paradox: selling native tokens requires a confidence 
 | Blockchain | `@solana/web3.js` — mainnet reads + devnet execution |
 | RPC | RPC Fast — high-performance Solana mainnet RPC |
 | Token Data | GoldRush (Covalent) — real SPL token balances with live USD pricing |
-| TVL Data | DefiLlama API (free, public) |
+| TVL Data | DefiLlama API — live TVL + 90-day historical array |
 | Yield Data | DefiLlama Yields API — live Kamino, Marginfi, Drift APYs |
 | Yield Data | Jupiter Lend API — live JupUSD vault supply rates |
+| AI | Anthropic Claude API (`claude-haiku-4-5`) — governance proposal generation |
 | Agent Identity | Solana Name Service (SNS) — `wardex-agent.sol` onchain agent identity |
 | Frontend | HTML + CSS + Vanilla JS |
 | Deployment | Render |
@@ -206,12 +213,16 @@ GOLDRUSH_API_KEY=
 
 # Jupiter Developer Platform — Jupiter Lend yield rates (developers.jup.ag)
 JUPITER_API_KEY=
+
+# Anthropic — Claude API for governance proposal generation (console.anthropic.com)
+# Optional: falls back to structured template when absent
+ANTHROPIC_API_KEY=
 EOF
 
 # Start the server
 node index.js
 # Startup log confirms active integrations:
-# [integrations] RPC Fast:✓ | GoldRush:✓ | Jupiter:✓ | SNS: ✓ (wardex-agent.sol)
+# [integrations] RPC Fast:✓ | GoldRush:✓ | Jupiter:✓ | SNS: ✓ (wardex-agent.sol) | Claude:✓ (haiku-4-5)
 
 # Open in browser
 http://localhost:3000
@@ -229,6 +240,11 @@ http://localhost:3000/api/agent/identity
 curl -X POST http://localhost:3000/api/agent/execute \
   -H 'Content-Type: application/json' \
   -d '{"daoName":"Jito DAO","action":"Deploy idle SOL to Jupiter Lend","venue":"Jupiter Lend (JupUSD)"}'
+
+# Generate a governance proposal (Claude Haiku or structured template fallback)
+curl -X POST http://localhost:3000/api/agent/proposal \
+  -H 'Content-Type: application/json' \
+  -d '{"daoName":"Jito DAO","analysis":{"riskScore":70,"nativeConcentration":63,"stableRatio":18,"totalValue":929000000,"yieldVenue":"Kamino Earn","yieldRate":0.055,"annualYieldOpportunity":9200000,"action":"Deploy idle stablecoins to Kamino Earn."}}'
 ```
 
 ---
@@ -283,7 +299,10 @@ $200–$500/month for automated monthly treasury health reports — on-chain dat
 - [x] Real agent execution on Solana Devnet — verifiable Memo program transactions
 - [x] Competitive gap UI — policy-based onboarding flow
 - [x] Non-custodial trust model — phased architecture, destination whitelist design
-- [ ] Realms governance proposal generation — draft and submit proposals on behalf of DAOs
+- [x] Historical TVL trend analysis — 30d/90d % change from DefiLlama historical array
+- [x] Multi-scenario bear market modelling — Base (−40%), Moderate (−60%), Severe (−80%)
+- [x] Claude API governance proposal generation — Realms-ready proposals via claude-haiku-4-5
+- [ ] Realms governance proposal generation — submit proposals directly on-chain via SPL Governance
 - [ ] Squads destination-whitelist delegate integration — Phase 2 execution model
 - [ ] Full SPL token account reads per governance PDA — GoldRush currently reads realm pubkey; extend to all derived treasury PDAs
 - [ ] Time-series forecasting (ARIMA/ETS) on historical TVL for runway prediction
@@ -311,6 +330,7 @@ Wardex integrates four sponsor stacks as core infrastructure, each solving a rea
 | **Not Your Regular Bounty** | Jupiter | Jupiter Lend API (`api.jup.ag/lend/v1/earn/tokens`) — live JupUSD vault APY as an additional yield deployment venue | `/api/yield/rates` → `jupiter_lend_usdc` |
 | **Build with GoldRush** | Covalent | GoldRush Balances API (`api.covalenthq.com/v1/solana-mainnet/...`) — real on-chain SPL token balances with live USD pricing for treasury PDAs | `/api/treasury/:protocol` → `goldRushConnected` |
 | **SNS Identity** | Bonfida | `wardex-agent.sol` embedded in every Memo program transaction; `/api/agent/identity` exposes the agent's SNS domain and verify link | `/api/agent/identity` |
+| **Claude API** | Anthropic | `claude-haiku-4-5` generates Realms-ready governance proposals from live treasury analysis data; structured template fallback when key absent | `POST /api/agent/proposal` |
 
 All integration keys are optional — Wardex falls back gracefully when keys are not set, keeping the core demo functional.
 
