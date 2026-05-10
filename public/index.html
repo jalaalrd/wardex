@@ -226,6 +226,10 @@
           <div class="stat-label">Estimated Runway</div>
           <div class="stat-value" id="runwayMonths" aria-live="polite"></div>
         </div>
+        <div class="stat-card" id="tvlTrendCard" role="listitem">
+          <div class="stat-label">TVL Trend (30d)</div>
+          <div class="stat-value" id="tvlTrend30d" aria-live="polite"></div>
+        </div>
       </div>
 
       <p id="estimatedNote" class="estimated-note hidden">* Breakdown estimated based on protocol category. Exact figures require on-chain token data.</p>
@@ -239,20 +243,25 @@
           </div>
           <div class="risk-bar-score" id="riskBarScore" aria-live="polite"></div>
         </div>
-        <div class="bear-case" role="list" aria-label="Bear market projections">
-          <div class="bear-stat" role="listitem">
-            <div class="bear-label">Current Value</div>
-            <div class="bear-value" id="currentValue"></div>
+        <div class="bear-current" role="group" aria-label="Current treasury value">
+          <div class="bear-label">Current Value</div>
+          <div class="bear-value" id="currentValue"></div>
+        </div>
+        <div class="scenario-grid" role="list" aria-label="Bear market scenarios">
+          <div class="scenario-col" role="listitem">
+            <div class="scenario-label">Base (−40%)</div>
+            <div class="scenario-value" id="scenarioBaseValue"></div>
+            <div class="scenario-loss" id="scenarioBaseLoss"></div>
           </div>
-          <div class="arrow" aria-hidden="true">→</div>
-          <div class="bear-stat" role="listitem">
-            <div class="bear-label">Bear Case Value (−70%)</div>
-            <div class="bear-value danger" id="bearCaseValue"></div>
+          <div class="scenario-col" role="listitem">
+            <div class="scenario-label">Moderate (−60%)</div>
+            <div class="scenario-value" id="scenarioModValue"></div>
+            <div class="scenario-loss" id="scenarioModLoss"></div>
           </div>
-          <div class="arrow" aria-hidden="true">→</div>
-          <div class="bear-stat" role="listitem">
-            <div class="bear-label">Potential Loss</div>
-            <div class="bear-value danger" id="potentialLoss"></div>
+          <div class="scenario-col scenario-col--severe" role="listitem">
+            <div class="scenario-label">Severe (−80%)</div>
+            <div class="scenario-value danger" id="bearCaseValue"></div>
+            <div class="scenario-loss danger" id="potentialLoss"></div>
           </div>
         </div>
       </div>
@@ -282,6 +291,21 @@
         <p id="simulationText"></p>
         <div class="tx-hash">Devnet TX: <a id="txHash" href="#" target="_blank" rel="noopener noreferrer"></a></div>
         <div class="agent-identity hidden">Agent identity: <strong id="agentIdentity"></strong> — <a href="https://www.sns.id/search?search=wardex-agent" target="_blank" rel="noopener noreferrer">Verify on-chain ↗</a></div>
+      </div>
+
+      <div class="proposal-section hidden" id="proposalSection">
+        <button id="proposalBtn" class="proposal-btn" aria-label="Generate governance proposal using Claude AI">
+          ⬡ Generate Governance Proposal
+        </button>
+        <div id="proposalResult" class="hidden proposal-result" role="region" aria-live="polite" aria-label="Generated governance proposal">
+          <div class="proposal-header">
+            <h4>Governance Proposal Draft</h4>
+            <span id="proposalModelBadge" class="proposal-model-badge"></span>
+          </div>
+          <p id="proposalTitle" class="proposal-title"></p>
+          <pre id="proposalBody" class="proposal-body"></pre>
+          <p class="proposal-note">Phase 1 output — ready to paste into Realms</p>
+        </div>
       </div>
 
     </section>

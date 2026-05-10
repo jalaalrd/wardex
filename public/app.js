@@ -139,10 +139,34 @@ function displayResults(protocol, a, yieldRates) {
   const track = document.getElementById('riskBarTrack');
   if (track) track.setAttribute('aria-valuenow', a.riskScore);
 
+  // TVL trend indicator
+  const trendCard = document.getElementById('tvlTrendCard');
+  const trendEl   = document.getElementById('tvlTrend30d');
+  if (a.tvlTrend && trendEl) {
+    const pct = (a.tvlTrend.change30d * 100).toFixed(1);
+    trendEl.textContent = (a.tvlTrend.change30d >= 0 ? '▲ +' : '▼ ') + pct + '%';
+    trendEl.className = 'stat-value ' + (a.tvlTrend.change30d >= 0 ? 'trend-up' : 'trend-down');
+    if (trendCard) trendCard.classList.remove('hidden');
+  } else if (trendCard) {
+    trendCard.classList.add('hidden');
+  }
+
   document.getElementById('riskBarScore').textContent = a.riskScore + '/100';
   document.getElementById('currentValue').textContent = formatMoney(a.totalValue);
-  document.getElementById('bearCaseValue').textContent = formatMoney(a.bearCaseTotalValue);
-  document.getElementById('potentialLoss').textContent = '−' + formatMoney(a.bearCaseNativeLoss);
+
+  // Multi-scenario bear market grid
+  if (a.scenarios) {
+    const { base, moderate, severe } = a.scenarios;
+    document.getElementById('scenarioBaseValue').textContent = formatMoney(base.treasuryValue);
+    document.getElementById('scenarioBaseLoss').textContent  = '−' + formatMoney(base.loss);
+    document.getElementById('scenarioModValue').textContent  = formatMoney(moderate.treasuryValue);
+    document.getElementById('scenarioModLoss').textContent   = '−' + formatMoney(moderate.loss);
+    document.getElementById('bearCaseValue').textContent     = formatMoney(severe.treasuryValue);
+    document.getElementById('potentialLoss').textContent     = '−' + formatMoney(severe.loss);
+  } else {
+    document.getElementById('bearCaseValue').textContent = formatMoney(a.bearCaseTotalValue);
+    document.getElementById('potentialLoss').textContent = '−' + formatMoney(a.bearCaseNativeLoss);
+  }
   document.getElementById('recommendation').textContent = a.recommendation;
   document.getElementById('actionText').textContent = a.action;
   document.getElementById('yieldOpportunity').textContent = formatMoney(a.annualYieldOpportunity) + ' / year';
@@ -163,6 +187,19 @@ function displayResults(protocol, a, yieldRates) {
   if (note) {
     if (a.estimated) note.classList.remove('hidden');
     else note.classList.add('hidden');
+  }
+
+  // Show proposal section and reset state
+  const proposalSection = document.getElementById('proposalSection');
+  const proposalResult  = document.getElementById('proposalResult');
+  const proposalBtn     = document.getElementById('proposalBtn');
+  if (proposalSection) proposalSection.classList.remove('hidden');
+  if (proposalResult)  proposalResult.classList.add('hidden');
+  if (proposalBtn) {
+    proposalBtn.textContent = '⬡ Generate Governance Proposal';
+    proposalBtn.disabled = false;
+    proposalBtn._currentAnalysis = a;
+    proposalBtn._currentDaoName  = document.getElementById('daoName').textContent;
   }
 
   // Reset simulate button
@@ -305,6 +342,42 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') {
       const val = e.target.value.trim();
       if (val) analyzeTreasury(val);
+    }
+  });
+
+  document.getElementById('proposalBtn').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const analysis = btn._currentAnalysis || {};
+    const daoName  = btn._currentDaoName || document.getElementById('daoName').textContent;
+
+    btn.textContent = '⬡ Generating proposal...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(`${API}/api/agent/proposal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ daoName, analysis }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || 'Proposal generation failed.');
+
+      document.getElementById('proposalTitle').textContent = data.proposalTitle;
+      document.getElementById('proposalBody').textContent  = data.proposalBody;
+
+      const badge = document.getElementById('proposalModelBadge');
+      if (badge) {
+        badge.textContent = data.generated ? '✦ Claude AI' : '◌ Template';
+        badge.className   = 'proposal-model-badge ' + (data.generated ? 'badge-ai' : 'badge-template');
+      }
+
+      document.getElementById('proposalResult').classList.remove('hidden');
+      btn.textContent = '✓ Proposal Generated';
+      announce('Governance proposal generated for ' + daoName);
+    } catch (err) {
+      btn.textContent = '⬡ Generate Governance Proposal';
+      btn.disabled = false;
+      showError('Proposal generation failed: ' + (err.message || 'Please try again.'));
     }
   });
 

@@ -10,9 +10,13 @@ const PORT = process.env.PORT || 3000;
 const IS_PROD = process.env.NODE_ENV === 'production';
 
 // Track integration API keys
-const RPCFAST_API_KEY  = process.env.RPCFAST_API_KEY;
-const GOLDRUSH_API_KEY = process.env.GOLDRUSH_API_KEY;
-const JUPITER_API_KEY  = process.env.JUPITER_API_KEY;
+const RPCFAST_API_KEY    = process.env.RPCFAST_API_KEY;
+const GOLDRUSH_API_KEY   = process.env.GOLDRUSH_API_KEY;
+const JUPITER_API_KEY    = process.env.JUPITER_API_KEY;
+const ANTHROPIC_API_KEY  = process.env.ANTHROPIC_API_KEY;
+
+const Anthropic = require('@anthropic-ai/sdk');
+const anthropic  = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
 
 // Solana connections — devnet for agent execution, mainnet for Realms treasury reads
 // RPC Fast powers fast reads (getMultipleAccountsInfo, getParsedTokenAccountsByOwner, getBalance).
@@ -156,6 +160,34 @@ async function getGoldRushBalances(address) {
     console.warn('[goldrush] Balances fetch failed:', err.message);
     return null;
   }
+}
+
+function analyseTvlTrend(tvlHistory) {
+  // tvlHistory: [{ date: epoch_seconds, totalLiquidityUSD: number }]
+  if (!tvlHistory || tvlHistory.length < 7) return null;
+  const last = tvlHistory[tvlHistory.length - 1];
+  const nowVal = last.totalLiquidityUSD || 0;
+  const nowMs = last.date * 1000;
+
+  const atDaysAgo = (days) => {
+    const target = nowMs - days * 86400 * 1000;
+    return tvlHistory.reduce((best, p) =>
+      Math.abs(p.date * 1000 - target) < Math.abs(best.date * 1000 - target) ? p : best
+    );
+  };
+
+  const p30 = atDaysAgo(30);
+  const p90 = atDaysAgo(90);
+  const pct = (from) => from.totalLiquidityUSD > 0
+    ? (nowVal - from.totalLiquidityUSD) / from.totalLiquidityUSD
+    : 0;
+
+  return {
+    change30d: pct(p30),
+    change90d: pct(p90),
+    slope30d: (nowVal - p30.totalLiquidityUSD) / 30, // USD per day
+    currentTvl: nowVal,
+  };
 }
 
 function categoriseGoldRushItems(items, nativeTokenSymbol) {
@@ -524,6 +556,52 @@ app.post('/api/agent/analyze', rateLimit(30, 60000), async (req, res) => {
   }
 });
 
+app.post('/api/agent/proposal', rateLimit(10, 60000), async (req, res) => {
+  const { daoName, analysis } = req.body || {};
+  if (!daoName || !analysis || typeof analysis.riskScore !== 'number') {
+    return sendError(res, 400, 'daoName and analysis object with riskScore are required.');
+  }
+
+  const riskScore      = analysis.riskScore;
+  const concentration  = (analysis.nativeConcentration || 0).toFixed(1);
+  const stableRatio    = (analysis.stableRatio || 0).toFixed(1);
+  const totalValue     = analysis.totalValue || 0;
+  const yieldVenue     = analysis.yieldVenue || 'Kamino Earn';
+  const yieldRate      = ((analysis.yieldRate || 0.055) * 100).toFixed(1);
+  const yieldOpp       = analysis.annualYieldOpportunity || 0;
+  const action         = analysis.action || 'Deploy idle stablecoins to a yield venue.';
+
+  const formatM = (v) => v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : v >= 1e3 ? '$' + (v / 1e3).toFixed(1) + 'K' : '$' + v.toFixed(0);
+
+  const generateFallback = () => {
+    const title = `Treasury Risk Management: ${riskScore >= 70 ? 'Urgent' : 'Proactive'} Action Required — ${daoName}`;
+    const body = `## Summary\nThe ${daoName} treasury currently holds ${concentration}% in native tokens with ${stableRatio}% in stablecoins. Risk score: ${riskScore}/100.\n\n## Proposed Action\n${action}\n\n## Yield Opportunity\nDeploying idle stablecoins to ${yieldVenue} at ${yieldRate}% APY would generate approximately ${formatM(yieldOpp)}/year.\n\n## Rationale\nBased on Wardex treasury analysis (wardex.onrender.com). Historical bear market data (2022) shows native token drawdowns of 70–80%. Policy-based execution requires no additional governance vote once approved.\n\n## Implementation\n1. Wardex agent monitors concentration daily\n2. On threshold breach, agent executes pre-approved rebalancing\n3. Monthly treasury report issued to governance committee\n\n## Vote\n- For: Approve treasury policy as described\n- Against: Maintain current treasury allocation`;
+    return { proposalTitle: title, proposalBody: body, model: 'template', generated: false };
+  };
+
+  if (!anthropic) return res.json(generateFallback());
+
+  try {
+    const prompt = `You are a DAO governance expert writing a formal treasury management proposal for ${daoName}.\n\nTreasury snapshot:\n- Total value: ${formatM(totalValue)}\n- Native token concentration: ${concentration}%\n- Stablecoin ratio: ${stableRatio}%\n- Risk score: ${riskScore}/100\n- Recommended action: ${action}\n- Best yield venue: ${yieldVenue} at ${yieldRate}% APY (${formatM(yieldOpp)}/year)\n\nWrite a concise Realms governance proposal with:\n1. A short title (under 80 chars) on the first line prefixed "TITLE: "\n2. A proposal body with sections: Summary, Proposed Action, Yield Opportunity, Rationale, Implementation Steps, Vote Options\n\nKeep it professional, specific, and under 400 words total. Reference the risk score and specific yield numbers.`;
+
+    const message = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 700,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const raw = message.content[0]?.text || '';
+    const titleMatch = raw.match(/TITLE:\s*(.+)/);
+    const proposalTitle = titleMatch ? titleMatch[1].trim() : `Treasury Risk Action — ${daoName}`;
+    const proposalBody = raw.replace(/TITLE:\s*.+\n?/, '').trim();
+
+    res.json({ proposalTitle, proposalBody, model: 'claude-haiku-4-5', generated: true });
+  } catch (err) {
+    console.error('[proposal] Claude API error:', err.message);
+    res.json(generateFallback());
+  }
+});
+
 app.post('/api/agent/execute', rateLimit(10, 60000), async (req, res) => {
   const { daoName, action, venue } = req.body || {};
   if (!daoName) return sendError(res, 400, 'daoName is required.');
@@ -586,6 +664,7 @@ app.post('/api/agent/execute', rateLimit(10, 60000), async (req, res) => {
 function buildTreasuryFromProtocol(data, slug, realmsData, goldRushItems) {
   const tvlHistory = data.tvl || [];
   const tvl = tvlHistory.length > 0 ? (tvlHistory[tvlHistory.length - 1].totalLiquidityUSD || 0) : 0;
+  const tvlTrend = analyseTvlTrend(tvlHistory);
 
   const key = (slug || '').toLowerCase();
   const cfg = DAO_CONFIGS[key] || {};
@@ -639,6 +718,7 @@ function buildTreasuryFromProtocol(data, slug, realmsData, goldRushItems) {
     estimatedBreakdown: !realmsData && !realBreakdown,
     goldRushConnected: !!realBreakdown,
     daoContext: cfg.context || '',
+    tvlTrend: tvlTrend || null,
     ...realmsContext,
   };
 }
@@ -655,8 +735,15 @@ function analyzeRisk(treasury, liveYieldRate, bestVenue) {
   const nativeConcentration = totalValue > 0 ? (nativeValue / totalValue) * 100 : 0;
   const stableRatio         = totalValue > 0 ? (stableValue / totalValue) * 100 : 0;
 
-  const bearCaseNativeLoss = nativeValue * 0.70;
-  const bearCaseTotalValue = totalValue - bearCaseNativeLoss;
+  const scenarios = {
+    base:     { label: 'Base (−40%)',     loss: nativeValue * 0.40 },
+    moderate: { label: 'Moderate (−60%)', loss: nativeValue * 0.60 },
+    severe:   { label: 'Severe (−80%)',   loss: nativeValue * 0.80 },
+  };
+  Object.values(scenarios).forEach(s => { s.treasuryValue = totalValue - s.loss; });
+  // Legacy fields — severe scenario kept for any existing references
+  const bearCaseNativeLoss = scenarios.severe.loss;
+  const bearCaseTotalValue = scenarios.severe.treasuryValue;
   const monthlyBurn        = Math.max(50000, totalValue * 0.001);
   const runwayMonths       = stableValue > 0 ? Math.floor(stableValue / monthlyBurn) : 0;
 
@@ -688,6 +775,7 @@ function analyzeRisk(treasury, liveYieldRate, bestVenue) {
     nativeConcentration, stableRatio,
     riskScore, runwayMonths,
     bearCaseTotalValue, bearCaseNativeLoss,
+    scenarios,
     annualYieldOpportunity, yieldRate, yieldVenue,
     recommendation, action,
     name: treasury.name,
@@ -699,6 +787,7 @@ function analyzeRisk(treasury, liveYieldRate, bestVenue) {
     customGovFork: treasury.customGovFork || false,
     goldRushConnected: treasury.goldRushConnected || false,
     daoContext: treasury.daoContext || '',
+    tvlTrend: treasury.tvlTrend || null,
     timestamp: new Date().toISOString(),
   };
 }
@@ -733,9 +822,10 @@ process.on('unhandledRejection', function(reason) {
 app.listen(PORT, function() {
   console.log('Wardex running on http://localhost:' + PORT + ' [' + (IS_PROD ? 'production' : 'development') + ']');
   console.log('[integrations]',
-    'RPC Fast:'    + (RPCFAST_API_KEY  ? '✓' : '○'),
-    '| GoldRush:'  + (GOLDRUSH_API_KEY ? '✓' : '○'),
-    '| Jupiter:'   + (JUPITER_API_KEY  ? '✓' : '○'),
-    '| SNS: ✓ (wardex-agent.sol)'
+    'RPC Fast:'    + (RPCFAST_API_KEY   ? '✓' : '○'),
+    '| GoldRush:'  + (GOLDRUSH_API_KEY  ? '✓' : '○'),
+    '| Jupiter:'   + (JUPITER_API_KEY   ? '✓' : '○'),
+    '| SNS: ✓ (wardex-agent.sol)',
+    '| Claude:'    + (ANTHROPIC_API_KEY ? '✓ (haiku-4-5)' : '○ (fallback mode)')
   );
 });
