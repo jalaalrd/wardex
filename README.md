@@ -3,6 +3,8 @@
 > Your DAO Treasury, Monitored and Protected by AI
 
 **Live Demo:** https://usewardex.xyz  
+**Demo Video:** [Watch on Loom](https://www.loom.com/share/b6ded31028e04371b3f1b32f1283d8e3)  
+**Pitch Video:** [Watch on Loom](https://www.loom.com/share/197f2df342bf404fa815abc42a371968)  
 **Built by:** [@jalaal_tweets](https://twitter.com/jalaal_tweets)
 
 Built for the Colosseum Frontier Hackathon 2026 — Powered by Superteam UK
