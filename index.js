@@ -804,31 +804,56 @@ function analyzeRisk(treasury, liveYieldRate, bestVenue, yieldRates) {
   };
 }
 
-const { getDomainKeySync, NameRegistryState } = require('@bonfida/spl-name-service');
+const { getDomainKeySync, NameRegistryState, resolve: snsResolve } = require('@bonfida/spl-name-service');
 
 // Agent identity — Solana Name Service (.sol) onchain identity for the Wardex agent
-// Uses @bonfida/spl-name-service to derive the domain PDA and attempt on-chain resolution
+// Uses @bonfida/spl-name-service SDK for real on-chain PDA derivation and resolution.
+// Checks the SOL record (set by owner) not just registry.owner, so the domain can be
+// registered by any wallet and pointed at the agent pubkey via the SOL record.
 app.get('/api/agent/identity', rateLimit(60, 60000), async (req, res) => {
   const SNS_DOMAIN = 'wardex-agent';
   const SNS_DISPLAY = SNS_DOMAIN + '.sol';
   const agentPubkey = agentKeypair.publicKey.toBase58();
 
-  // Derive the deterministic domain PDA — this always works, no registration needed
+  // Derive the deterministic domain PDA — always computable, no registration needed
   const { pubkey: domainPda } = getDomainKeySync(SNS_DOMAIN);
 
-  // Attempt on-chain lookup via RPC Fast (or fallback) to check registration status
-  let snsOwner = null;
+  let snsOwner    = null;   // wallet that registered the domain
+  let snsSolRecord = null;  // SOL record — address the domain points to (set by owner)
   let snsRegistered = false;
   let snsAgentMatch = false;
+
   try {
+    // Check registration via NameRegistryState
     const { registry } = await NameRegistryState.retrieve(solanaMainnet, domainPda);
     snsOwner = registry.owner.toBase58();
     snsRegistered = true;
-    snsAgentMatch = snsOwner === agentPubkey;
-    console.log('[sns] wardex-agent.sol resolved — owner:', snsOwner);
-  } catch (err) {
-    // Domain not yet registered on-chain — PDA is correct, registration pending
-    console.log('[sns] wardex-agent.sol not yet registered on mainnet:', err.message?.slice(0, 60));
+    console.log('[sns] wardex-agent.sol registered — owner:', snsOwner);
+  } catch {
+    console.log('[sns] wardex-agent.sol not yet registered on mainnet');
+  }
+
+  if (snsRegistered) {
+    try {
+      // Resolve the SOL record — this is what the domain "points to" (set separately by owner)
+      const resolved = await snsResolve(solanaMainnet, SNS_DOMAIN);
+      snsSolRecord  = resolved.toBase58();
+      snsAgentMatch = snsSolRecord === agentPubkey;
+      console.log('[sns] SOL record:', snsSolRecord, '| agent match:', snsAgentMatch);
+    } catch {
+      // SOL record not set yet — owner needs to set it to the agent pubkey
+    }
+  }
+
+  let registrationStatus;
+  if (!snsRegistered) {
+    registrationStatus = 'domain PDA derived on-chain; registration pending';
+  } else if (!snsSolRecord) {
+    registrationStatus = 'registered — set SOL record to agent pubkey to complete verification';
+  } else if (snsAgentMatch) {
+    registrationStatus = 'verified — SOL record resolves to agent pubkey';
+  } else {
+    registrationStatus = 'registered — SOL record points to ' + snsSolRecord;
   }
 
   res.json({
@@ -837,10 +862,9 @@ app.get('/api/agent/identity', rateLimit(60, 60000), async (req, res) => {
     agentPubkey,
     snsRegistered,
     snsOwner,
+    snsSolRecord,
     snsAgentMatch,
-    registrationStatus: snsRegistered
-      ? (snsAgentMatch ? 'verified — domain resolves to agent pubkey' : 'registered but owner mismatch')
-      : 'domain PDA derived on-chain; registration pending',
+    registrationStatus,
     network: 'mainnet-beta',
     resolveUrl: `https://www.sns.id/search?search=${SNS_DOMAIN}`,
     integrations: {
