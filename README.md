@@ -7,6 +7,8 @@
 
 Built for the Colosseum Frontier Hackathon 2026 — Powered by Superteam UK
 
+> 🎓 **University submission** — Built by an MSc Business Analytics student, Northumbria University. Eligible for the Colosseum University Award.
+
 ---
 
 ## The Problem
@@ -69,10 +71,12 @@ Agent Execution        → Real Solana devnet transaction via Memo program
 | **Avantgarde / Enzyme** | EVM only | Yes (human + vault) | ~$50M+ | No (policy-based) | No |
 | **Realms (SPL Governance)** | Solana | No | None | Yes — every action | No |
 | **Squads Protocol** | Solana | No (manual via SquadsX) | None | Yes — every action | No |
-| **Castle Finance** | Solana | Limited (3% APY vaults) | None | No | No |
+| **Castle Finance** | Solana | Limited (3% APY vaults)¹ | None | No | No |
 | **⬡ Wardex** | **Solana** | **Yes (AI agent)** | **$1M+** | **No (policy-based)** | **Yes** |
 
 **There is no Karpatkey for Solana.** Wardex fills that gap — serving the 50+ Solana DAOs with $1M+ treasuries (representing $15–25B in collectively managed assets, per DefiLlama) that Karpatkey structurally ignores, on the chain where the most active governance communities live.
+
+> ¹ Castle Finance last verified active May 2026; limited to static vault deposits with no AI-driven rebalancing or governance integration.
 
 ---
 
@@ -286,6 +290,75 @@ $200–$500/month for automated monthly treasury health reports — on-chain dat
 
 ---
 
+## Go-to-Market Strategy
+
+Every major DAO treasury mandate in DeFi history — Karpatkey with Gnosis, Llama with Aave, Gauntlet with Compound — started with a **governance forum post, not a cold sales call**. Wardex follows the same playbook, compressed for Solana's faster governance cycle and our existing live data advantage.
+
+### Forum-First Acquisition Model
+
+**Month 1 — Thought Leadership**
+
+Publish treasury intelligence analyses for Jito, Marinade, and Raydium directly on their governance forums — using Wardex's live on-chain data to show, not tell. The Jito Foundation forum ([forum.jito.network](https://forum.jito.network/)) is the first target: JIP-24 just redirected 100% of Block Engine fees to the DAO treasury with no deployment playbook. That is a $15M+/yr problem Wardex solves with a working product, today.
+
+Parallel content tracks:
+- Post treasury risk analyses on [Realms governance hub](https://realms.today/) (1,700+ Solana DAOs)
+- Participate in JIP-24 implementation discussions — position as a builder, not a vendor
+- Publish "Solana DAO Treasury Health Check" thread on Twitter/X tagging @jito_sol, @MarinadeFinance, @JupiterExchange
+
+**Month 2 — Pilot Outreach**
+
+Offer one mid-tier Solana DAO a free 30-day Wardex monitoring engagement. Target: Raydium (on-chain governance live 2025, treasury management practices still maturing). Deliver a published case study with metrics: risk score before/after, yield opportunity quantified, governance proposal generated. Share it publicly on the DAO's own forum — free distribution in front of every DAO that watches Raydium.
+
+**Month 3 — First Contracts**
+
+Convert the pilot to a paid performance-fee mandate. Use the case study to approach Jito and Marinade through their governance forums with a formal proposal — the same governance proposal pathway Karpatkey used to win ENS, Balancer, and Aave (all via public DAO forum proposals, not private BD).
+
+### Target Channels
+
+| Channel | Rationale | Priority |
+|---|---|---|
+| [Jito Foundation Forum](https://forum.jito.network/) | JIP-24 = $15M+/yr idle, active governance community | Week 1 |
+| [Jupiter DAO Forum](https://discuss.jup.ag/) | Treasury reactivation planned for 2027 — position Wardex as the execution layer now | Week 2 |
+| Marinade Realms governance | MIP-11 buyback strategy needs deployment intelligence; Head of Governance publicly accessible | Week 2 |
+| Superteam UK Discord | Warm network — same community that sponsored this build; direct line to Kash Dhanda (Jupiter "Cat Herder", formerly Superteam DAO) | Week 1 |
+| [Realms.today](https://realms.today/) community | 1,700+ Solana DAOs using the platform Wardex reads; treasury tooling posts get attention | Week 3 |
+| Twitter/X (build in public) | Governance discussions happen publicly; tagging relevant DAOs builds inbound interest | Ongoing |
+
+### Unfair Advantage Over KPK's Playbook
+
+Karpatkey took **2 years** to formalise its first client (Gnosis, where they were already embedded). Another 12 months to win ENS via competitive RFP. Wardex compresses this because:
+
+1. **Live data is already running** — the first Jito or Marinade demo is not a pitch deck; it's their actual treasury, scored, trended, and yielded in real time
+2. **Mid-tier DAOs move faster** — the $1M–$50M segment KPK ignores has shorter governance cycles and lower competition from established players
+3. **Phase 1 is zero-friction** — monitoring and proposal generation requires no custody, no multisig changes, and no governance vote. A DAO can start using Wardex before it votes to use Wardex
+4. **Superteam UK network** — direct access to builders running governance for several Solana protocols, including the Superteam DAO alumnus now leading Jupiter governance
+
+### KPK's Mistakes Wardex Will Not Repeat
+
+Research into KPK's 2025 Gnosis firing (88% vote to remove) and Gauntlet's Aave exit reveals a consistent failure pattern in DAO treasury management: high fees + opaque performance + no accountability structure. Wardex's performance fee model (you only pay when yield is generated) and on-chain transparency (every action logged to a governance proposal or Squads transaction) structurally prevent both failure modes.
+
+---
+
+## What $250K Builds
+
+If accepted into the Colosseum accelerator, Wardex uses the pre-seed to close the gap between Phase 1 (live monitoring + AI proposals) and Phase 2 (on-chain execution with a Squads destination-whitelisted delegate):
+
+| Allocation | Amount | What It Funds |
+|---|---|---|
+| **Team (60%)** | $150,000 | Founder salary ($60K/yr prorated) + first Solana smart contract engineer for Squads Phase 2 integration and Kamino Earn CPI (~$80K/yr, 12-month contract) |
+| **Product & Security (20%)** | $50,000 | Security audit ($20K — non-negotiable for treasury tooling) + Squads destination-whitelist delegate build ($15K) + cloud infrastructure and monitoring ($15K) |
+| **Go-to-Market (15%)** | $37,500 | 5 paid DAO pilots ($5K incentive each to seed performance fee pipeline) + Breakpoint 2026 presence + governance forum amplification |
+| **Legal & Ops (5%)** | $12,500 | LLC formation, SAFEs, terms of service, accounting setup |
+
+**6-Month Milestones Post-Funding**
+
+1. **Phase 2 live on mainnet** — Squads destination-whitelist delegate executes within a DAO's pre-approved mandate; first real yield deployment event on Solana
+2. **3 signed pilot DAOs** paying performance fees (target: Jito CSD, Raydium, + 1 emerging DAO)
+3. **First verified yield generation** — Wardex executes a Kamino USDC deposit for a live DAO treasury; event documented on-chain and in governance report
+4. **ARR trajectory confirmed** — 10 DAOs at $6,188/yr average = $61,880 ARR; path to $619K visible at 100 DAOs
+
+---
+
 ## Roadmap
 
 - [x] Live treasury TVL from DefiLlama
@@ -314,9 +387,13 @@ $200–$500/month for automated monthly treasury health reports — on-chain dat
 ## Built By
 
 **Jalaaldeen Akinola** — MSc Business Analytics, Newcastle Business School, Northumbria University  
-**Twitter/X:** [@jalaal_tweets](https://twitter.com/jalaal_tweets)
+**Twitter/X:** [@jalaal_tweets](https://twitter.com/jalaal_tweets) · **GitHub:** [jalaalrd](https://github.com/jalaalrd/wardex)
 
-Background in Web3 and financial analytics. Previously founded **Zakatchain** — a blockchain-based charitable giving platform that raised funds for 300+ families in Nigeria. Wardex bridges MSc forecasting methodology with Solana's autonomous agent infrastructure.
+I'm building Wardex because I spent months researching on-chain governance and DAO financial behaviour for my MSc dissertation — and what I found was embarrassing: protocols generating tens of millions in protocol fees are letting that capital sit idle in a wallet, because the governance process required to deploy it is so friction-heavy that it never happens. Jito's JIP-24 is the clearest example: $15M+/yr in Block Engine fees now routing to the DAO treasury with no deployment strategy at all.
+
+I'm the right person to build this because I sit at the intersection of two worlds most builders occupy separately: quantitative financial analysis (my MSc programme covers forecasting, risk modelling, and portfolio theory) and Solana on-chain development (I've shipped the Realms integration, GoldRush token reads, SNS identity, and Claude-powered proposal generation in this build). Wardex is not a general "AI for DAOs" product. It is a specific answer to a specific failure mode I observed in the data.
+
+Previously founded **Zakatchain** — a blockchain-based charitable giving platform that raised funds for 300+ families in Nigeria. That experience taught me how to build trust with communities who have never used a financial tool like this before — the same trust problem Wardex solves for DAO treasury committees.
 
 ---
 
@@ -327,7 +404,7 @@ Wardex integrates four sponsor stacks as core infrastructure, each solving a rea
 | Track | Sponsor | Integration | Endpoint |
 |---|---|---|---|
 | **RPC Fast** | RPC Fast | High-performance Solana mainnet RPC — all treasury reads route through `solana-rpc.rpcfast.com` when `RPCFAST_API_KEY` is set | All `/api/treasury/*` reads |
-| **Not Your Regular Bounty** | Jupiter | Jupiter Lend API (`api.jup.ag/lend/v1/earn/tokens`) — live JupUSD vault APY as an additional yield deployment venue | `/api/yield/rates` → `jupiter_lend_usdc` |
+| **Not Your Regular Bounty** | Jupiter | Jupiter Lend API (`api.jup.ag/lend/v1/earn/tokens`) — live JupUSD vault APY as an additional yield deployment venue. See [JUPITER_DX_REPORT.md](./JUPITER_DX_REPORT.md) for full integration notes. | `/api/yield/rates` → `jupiter_lend_usdc` |
 | **Build with GoldRush** | Covalent | GoldRush Balances API (`api.covalenthq.com/v1/solana-mainnet/...`) — real on-chain SPL token balances with live USD pricing for treasury PDAs | `/api/treasury/:protocol` → `goldRushConnected` |
 | **SNS Identity** | Bonfida | `wardex-agent.sol` embedded in every Memo program transaction; `/api/agent/identity` exposes the agent's SNS domain and verify link | `/api/agent/identity` |
 | **Claude API** | Anthropic | `claude-haiku-4-5` generates Realms-ready governance proposals from live treasury analysis data; structured template fallback when key absent | `POST /api/agent/proposal` |

@@ -1,15 +1,15 @@
 {
   "name": "wardex",
   "version": "1.0.0",
-  "description": "",
+  "description": "DAO treasury intelligence agent for Solana — AI-powered risk scoring, yield optimisation, and governance proposal generation via Realms SPL Governance",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["solana", "dao", "treasury", "defi", "governance", "realms", "ai-agent", "yield", "kamino", "jupiter"],
+  "author": "Jalaaldeen Akinola <akinolajalaaldeen@gmail.com>",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
