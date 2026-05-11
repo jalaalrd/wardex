@@ -341,21 +341,32 @@ Research into KPK's 2025 Gnosis firing (88% vote to remove) and Gauntlet's Aave 
 
 ## What $250K Builds
 
-If accepted into the Colosseum accelerator, Wardex uses the pre-seed to close the gap between Phase 1 (live monitoring + AI proposals) and Phase 2 (on-chain execution with a Squads destination-whitelisted delegate):
+Colosseum's $250K pre-seed is 18–24 months of focused execution on one goal: get Phase 2 live on mainnet, sign 5 paying DAOs, and hit $30K ARR before a seed round.
 
 | Allocation | Amount | What It Funds |
 |---|---|---|
-| **Team (60%)** | $150,000 | Founder salary ($60K/yr prorated) + first Solana smart contract engineer for Squads Phase 2 integration and Kamino Earn CPI (~$80K/yr, 12-month contract) |
-| **Product & Security (20%)** | $50,000 | Security audit ($20K — non-negotiable for treasury tooling) + Squads destination-whitelist delegate build ($15K) + cloud infrastructure and monitoring ($15K) |
-| **Go-to-Market (15%)** | $37,500 | 5 paid DAO pilots ($5K incentive each to seed performance fee pipeline) + Breakpoint 2026 presence + governance forum amplification |
-| **Legal & Ops (5%)** | $12,500 | LLC formation, SAFEs, terms of service, accounting setup |
+| **Engineering** | $87,500 (35%) | Founding smart contract engineer hire — Squads Phase 2 destination-whitelist delegate + Kamino Earn CPI integration ($80K/yr prorated). Founder salary: $50K/yr. |
+| **Security & Infrastructure** | $42,500 (17%) | Smart contract audit for Phase 2 Squads integration ($20K — non-negotiable for treasury tooling) + RPC node infrastructure ($12K) + monitoring and alerting ($10.5K) |
+| **Product Development** | $37,500 (15%) | Realms on-chain proposal submission, full SPL token account reads per governance PDA, ARIMA/ETS TVL forecasting, automated monthly treasury reports |
+| **Legal & Compliance** | $25,000 (10%) | LLC formation, SAFEs, terms of service, privacy policy, accounting setup, and insurance — critical for a product handling DAO treasury mandates |
+| **Go-to-Market** | $32,500 (13%) | Founder-led only: 5 DAO pilot incentives ($2K each = $10K), Breakpoint 2026 presence ($8K), governance forum content and community tools ($7K), DAO advisory network ($7.5K) |
+| **Buffer & Ops** | $25,000 (10%) | 3-month contingency + accounting, bookkeeping, miscellaneous operational costs |
 
-**6-Month Milestones Post-Funding**
+**Monthly burn: ~$10,400 → 24-month runway on $250K**
 
-1. **Phase 2 live on mainnet** — Squads destination-whitelist delegate executes within a DAO's pre-approved mandate; first real yield deployment event on Solana
-2. **3 signed pilot DAOs** paying performance fees (target: Jito CSD, Raydium, + 1 emerging DAO)
-3. **First verified yield generation** — Wardex executes a Kamino USDC deposit for a live DAO treasury; event documented on-chain and in governance report
-4. **ARR trajectory confirmed** — 10 DAOs at $6,188/yr average = $61,880 ARR; path to $619K visible at 100 DAOs
+**Milestones this capital achieves — in order:**
+
+1. **Month 2** — Smart contract audit complete; Phase 2 Squads delegate architecture reviewed and cleared
+2. **Month 3** — Phase 2 live on Solana mainnet; first destination-whitelisted execution within a live DAO's pre-approved mandate
+3. **Month 4** — 3 pilot DAOs signed (target: Jito CSD, Raydium + 1 emerging DAO); first real yield deployment event on-chain
+4. **Month 6** — 5 paying DAOs; first performance fee invoices issued; $30K ARR confirmed
+5. **Month 12** — 16 DAOs at $6,188/yr average = break-even; Series A raise begins from a position of revenue
+
+**Why this allocation, not 60% on team:**
+
+The biggest risk for a DAO treasury product is not distribution — it's trust. A DAO will not hand over a treasury mandate to a product that hasn't been audited. Allocating $20K to a smart contract audit before the first enterprise pitch is not caution; it's the product. Every dollar that goes to security before Month 3 is worth $10 in GTM spend after, because it removes the first and largest objection in every DAO conversation.
+
+GTM is founder-led at this stage. Karpatkey's entire client base from 2022–2024 was won through governance forum proposals — no marketing team, no paid ads, no events budget. Wardex's first 5 DAOs will be acquired the same way: by showing live treasury data for their own protocol and asking if they'd like the agent to monitor it continuously. That costs time, not money.
 
 ---
 
