@@ -88,4 +88,4 @@ The developer platform experience itself (key issuance, docs structure) is bette
 
 ---
 
-*Wardex — wardex.onrender.com | Source: github.com/jalaalrd/wardex | Builder: @jalaal_tweets*
+*Wardex — usewardex.xyz | Source: github.com/jalaalrd/wardex | Builder: @jalaal_tweets*

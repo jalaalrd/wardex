@@ -210,7 +210,7 @@ function categoriseGoldRushItems(items, nativeTokenSymbol) {
 
 app.disable('x-powered-by');
 app.use(cors({
-  origin: IS_PROD ? ['https://wardex.onrender.com'] : '*',
+  origin: IS_PROD ? ['https://usewardex.xyz', 'https://www.usewardex.xyz'] : '*',
   methods: ['GET', 'POST'],
 }));
 app.use(express.json({ limit: '10kb' }));
@@ -575,7 +575,7 @@ app.post('/api/agent/proposal', rateLimit(10, 60000), async (req, res) => {
 
   const generateFallback = () => {
     const title = `Treasury Risk Management: ${riskScore >= 70 ? 'Urgent' : 'Proactive'} Action Required — ${daoName}`;
-    const body = `## Summary\nThe ${daoName} treasury currently holds ${concentration}% in native tokens with ${stableRatio}% in stablecoins. Risk score: ${riskScore}/100.\n\n## Proposed Action\n${action}\n\n## Yield Opportunity\nDeploying idle stablecoins to ${yieldVenue} at ${yieldRate}% APY would generate approximately ${formatM(yieldOpp)}/year.\n\n## Rationale\nBased on Wardex treasury analysis (wardex.onrender.com). Historical bear market data (2022) shows native token drawdowns of 70–80%. Policy-based execution requires no additional governance vote once approved.\n\n## Implementation\n1. Wardex agent monitors concentration daily\n2. On threshold breach, agent executes pre-approved rebalancing\n3. Monthly treasury report issued to governance committee\n\n## Vote\n- For: Approve treasury policy as described\n- Against: Maintain current treasury allocation`;
+    const body = `## Summary\nThe ${daoName} treasury currently holds ${concentration}% in native tokens with ${stableRatio}% in stablecoins. Risk score: ${riskScore}/100.\n\n## Proposed Action\n${action}\n\n## Yield Opportunity\nDeploying idle stablecoins to ${yieldVenue} at ${yieldRate}% APY would generate approximately ${formatM(yieldOpp)}/year.\n\n## Rationale\nBased on Wardex treasury analysis (usewardex.xyz). Historical bear market data (2022) shows native token drawdowns of 70–80%. Policy-based execution requires no additional governance vote once approved.\n\n## Implementation\n1. Wardex agent monitors concentration daily\n2. On threshold breach, agent executes pre-approved rebalancing\n3. Monthly treasury report issued to governance committee\n\n## Vote\n- For: Approve treasury policy as described\n- Against: Maintain current treasury allocation`;
     return { proposalTitle: title, proposalBody: body, model: 'template', generated: false };
   };
 
