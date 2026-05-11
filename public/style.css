@@ -148,6 +148,11 @@ nav {
 .logo-hex {
   color: var(--accent-light);
 }
+.logo-img {
+  height: 44px;
+  width: auto;
+  display: block;
+}
 
 .nav-actions {
   display: flex;
