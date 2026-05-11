@@ -141,7 +141,7 @@ function displayResults(protocol, a, yieldRates) {
   const track = document.getElementById('riskBarTrack');
   if (track) track.setAttribute('aria-valuenow', a.riskScore);
 
-  // TVL trend indicator
+  // TVL trend indicator — 30d
   const trendCard = document.getElementById('tvlTrendCard');
   const trendEl   = document.getElementById('tvlTrend30d');
   if (a.tvlTrend && trendEl) {
@@ -151,6 +151,18 @@ function displayResults(protocol, a, yieldRates) {
     if (trendCard) trendCard.classList.remove('hidden');
   } else if (trendCard) {
     trendCard.classList.add('hidden');
+  }
+
+  // TVL trend indicator — 90d
+  const trend90Card = document.getElementById('tvlTrend90dCard');
+  const trend90El   = document.getElementById('tvlTrend90d');
+  if (a.tvlTrend && a.tvlTrend.change90d != null && trend90El) {
+    const pct90 = (a.tvlTrend.change90d * 100).toFixed(1);
+    trend90El.textContent = (a.tvlTrend.change90d >= 0 ? '▲ +' : '▼ ') + pct90 + '%';
+    trend90El.className = 'stat-value ' + (a.tvlTrend.change90d >= 0 ? 'trend-up' : 'trend-down');
+    if (trend90Card) trend90Card.classList.remove('hidden');
+  } else if (trend90Card) {
+    trend90Card.classList.add('hidden');
   }
 
   document.getElementById('riskBarScore').textContent = a.riskScore + '/100';
@@ -384,7 +396,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!res.ok) throw new Error(data?.error?.message || 'Proposal generation failed.');
 
       document.getElementById('proposalTitle').textContent = data.proposalTitle;
-      document.getElementById('proposalBody').textContent  = data.proposalBody;
+      const safeBody = data.proposalBody
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      document.getElementById('proposalBody').innerHTML = safeBody;
 
       const badge = document.getElementById('proposalModelBadge');
       if (badge) {

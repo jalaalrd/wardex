@@ -1217,11 +1217,13 @@ section {
 }
 .tx-hash a {
   color: var(--accent-light);
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
   font-family: 'Courier New', monospace;
   font-size: 11px;
 }
-.tx-hash a:hover { text-decoration: underline; }
+.tx-hash a:hover { text-decoration-style: solid; }
 
 .agent-identity {
   font-size: 12px;
