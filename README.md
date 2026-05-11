@@ -55,7 +55,7 @@ Agent Execution        → Real Solana devnet transaction via Memo program
 4. **Token balances** — fetches real SPL token balances and live USD pricing via GoldRush (Covalent); replaces estimated ratios when coverage is ≥5% of TVL
 5. **Live yield rates** — fetches current Kamino USDC/SOL, Marginfi, Drift, and Jupiter Lend APYs; best venue is selected automatically
 6. **Risk scoring** — calculates native token concentration, three bear market scenarios (Base −40%, Moderate −60%, Severe −80% based on 2022 historical data), runway estimate, and annual yield opportunity
-7. **Governance proposal generation** — Claude Haiku generates a fully-formed, Realms-ready governance proposal from the treasury analysis; falls back to a structured template when the API key is absent
+7. **Governance proposal generation** — Claude Haiku generates a fully-formed, Realms-ready governance proposal from the treasury analysis.
 8. **Agent recommendation** — generates a specific, actionable recommendation with the best available yield venue
 9. **Real execution** — broadcasts a verifiable Solana devnet transaction via the Memo program with the agent's `wardex-agent.sol` SNS identity embedded, returning a real Solana Explorer link
 
@@ -332,7 +332,6 @@ Wardex integrates four sponsor stacks as core infrastructure, each solving a rea
 | **SNS Identity** | Bonfida | `wardex-agent.sol` embedded in every Memo program transaction; `/api/agent/identity` exposes the agent's SNS domain and verify link | `/api/agent/identity` |
 | **Claude API** | Anthropic | `claude-haiku-4-5` generates Realms-ready governance proposals from live treasury analysis data; structured template fallback when key absent | `POST /api/agent/proposal` |
 
-All integration keys are optional — Wardex falls back gracefully when keys are not set, keeping the core demo functional.
 
 ---
 
