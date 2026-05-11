@@ -255,18 +255,38 @@ curl -X POST http://localhost:3000/api/agent/proposal \
 
 ## Business Model
 
-Parcel and Tally both failed because free governance tooling cannot sustain a business. Wardex is designed from day one with a performance-aligned revenue model.
+Parcel and Tally both failed because free governance tooling cannot sustain a business. Wardex is designed from day one with a performance-aligned revenue model — benchmarked directly against what the market's leading treasury managers charge.
 
-### Revenue Streams
+### What Competitors Charge (2025–2026)
 
-**1. Performance Fee (primary)**  
-10–15% of yield generated. A $5M treasury with $900K in idle stablecoins at 5.5% APY = $49,500/year in yield. Wardex takes $5,000–$7,500. Zero cost to DAOs unless Wardex delivers.
+| Provider | Model | Fee | Notes |
+|---|---|---|---|
+| **Karpatkey (ENS mandate)** | AUM + performance | 0.5% AUM/yr + 10% of yield | Industry reference. ENS endowment. Fired by Gnosis 2025 over $700K oracle loss. |
+| **Steakhouse Financial** | Performance only | 10% of yield | Morpho vaults, dYdX SubDAO. Token vesting + forfeiture clause standard. |
+| **Gauntlet (Aave)** | Flat retainer | $2M/yr fixed | Risk management, not yield generation. No performance link — caused governance controversy. |
+| **Llama** | Retainer + advisory | $400K–$800K/yr | Contributor DAO model. Acquired by Uniswap Foundation 2023. |
+| **Market standard (mid-tier DAOs)** | Hybrid | 0.5–1% AUM + 10% performance | Most competitive mandates use a hybrid to align incentives while ensuring baseline viability. |
 
-**2. Treasury Policy Setup Fee**  
-$500–$2,000 one-time for configuring risk parameters, whitelisted protocols, and governance proposal templates.
+**Karpatkey's 10% performance fee + 0.5% AUM is the industry standard for DAOs above $100M. Wardex targets the segment below — and prices accordingly.**
 
-**3. Premium Intelligence Reports**  
-$200–$500/month for automated monthly treasury health reports — on-chain data, risk trends, governance recommendations.
+### Wardex Revenue Streams
+
+**Phase 1 — Intelligence Retainer** *(zero custody, immediate entry)*  
+$300–$500/month for continuous on-chain monitoring, 3-scenario risk scoring, TVL trend alerts, and monthly treasury health reports. No governance vote required. Serves as the paid entry point before a Phase 2 mandate.
+
+> *Comparable to Steakhouse's and Block Analitica's advisory retainers for mid-tier protocols — structured as a governance-approved monthly budget, paid in USDC or native token.*
+
+**Phase 2 — Performance Fee on Yield** *(execution mandate)*  
+**10% of yield generated** — aligned with Karpatkey/Steakhouse market standard, with two features competitors don't offer:
+- **Forfeiture clause:** If Wardex underperforms a simple Kamino USDC deposit benchmark in any quarter, the performance fee for that quarter is waived
+- **On-chain accountability:** Every yield deployment is recorded in a Squads transaction, visible to all multisig signers — no opaque oracle or off-chain execution (the exact failure that got Karpatkey fired from Gnosis)
+
+**Phase 3 — Governance Proposal Service** *(add-on)*  
+$1,500–$3,000 per governance proposal drafted and submitted via Realms SPL Governance — risk analysis, yield comparison, rationale, and on-chain submission included. One-time per proposal, no retainer required.
+
+### Why 10% (Not 10–15%)
+
+The original range of 10–15% was above the market standard. Charging more than Karpatkey — the $1.8B AUM industry leader — with no track record signals either ignorance of the market or a founder who hasn't spoken to a DAO yet. 10% matches Karpatkey's ENS performance fee exactly, while the forfeiture clause and on-chain transparency give Wardex a structural reason to win on governance proposals against established competitors.
 
 ### Unit Economics
 
@@ -276,9 +296,12 @@ $200–$500/month for automated monthly treasury health reports — on-chain dat
 | Idle stablecoins (18%) | $900K |
 | Live USDC APY (Kamino) | 5.5% |
 | Annual yield generated | $49,500 |
-| Wardex fee (12.5%) | $6,188/year per DAO |
-| Break-even DAOs | ~16 DAOs |
-| 100 DAO ARR | ~$619,000 |
+| Wardex performance fee (10%) | **$4,950/yr** |
+| Phase 1 retainer ($400/mo) | **$4,800/yr** |
+| **Combined revenue per DAO** | **~$9,750/yr** |
+| Break-even DAOs (at $9,750 avg) | ~11 DAOs |
+| 50 DAO ARR | ~$487,500 |
+| 100 DAO ARR | ~$975,000 |
 
 ### Why Now
 
