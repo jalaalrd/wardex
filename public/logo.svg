@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 512">
+  <defs>
+    <!-- Top-light gradient inside hex: simulates light source from top-left -->
+    <linearGradient id="hexGrad" x1="0%" y1="0%" x2="60%" y2="100%">
+      <stop offset="0%"   stop-color="#9333ea" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#6d28d9" stop-opacity="1"/>
+    </linearGradient>
+    <!-- Subtle inner highlight at very top -->
+    <linearGradient id="hexHighlight" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="512" fill="#08090e"/>
+
+  <g id="icon">
+    <!-- FLAT-TOP HEXAGON centered at (165, 252), radius=112 -->
+    <!-- Points: (277,252) (221,349) (109,349) (53,252) (109,155) (221,155) -->
+    <polygon
+      points="277,252 221,349 109,349 53,252 109,155 221,155"
+      fill="url(#hexGrad)"
+    />
+
+    <!-- Inner highlight overlay (top half only) for depth -->
+    <polygon
+      points="277,252 221,155 165,155 109,155 53,252 165,252"
+      fill="url(#hexHighlight)"
+    />
+
+    <!-- Green bottom-edge trim: trace the bottom two edges of the hex -->
+    <!-- Bottom-left edge: (109,349)→(53,252), bottom-right edge: (221,349)→(277,252) -->
+    <!-- Rendered as two thick strokes hugging the outer edge -->
+    <line x1="109" y1="349" x2="221" y2="349" stroke="#10b981" stroke-width="4" stroke-linecap="round"/>
+    <line x1="109" y1="349" x2="53"  y2="252" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+    <line x1="221" y1="349" x2="277" y2="252" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+
+    <!-- Bold W — slightly smaller for breathing room, precise vertical centering -->
+    <!-- font-size=112, cap-height ~78px, center at y=252: baseline=252+39=291 -->
+    <text
+      x="165"
+      y="293"
+      text-anchor="middle"
+      font-family="'Arial Black', Impact, Arial, sans-serif"
+      font-weight="900"
+      font-size="112"
+      fill="#f0ecff"
+    >W</text>
+  </g>
+
+  <!-- Subtle vertical divider -->
+  <line x1="308" y1="124" x2="308" y2="390" stroke="#ffffff" stroke-width="1" opacity="0.07"/>
+
+  <!-- WARDEX wordmark — off-white with lavender tint, optically centered on hex -->
+  <!-- Hex vertical center: (155+349)/2 = 252. font-size=82, cap-height≈59px -->
+  <!-- baseline = 252+30 = 282 -->
+  <g id="wordmark">
+    <text
+      x="336"
+      y="282"
+      font-family="'Arial Black', 'Arial Bold', Arial, sans-serif"
+      font-weight="900"
+      font-size="82"
+      fill="#f0ecff"
+      letter-spacing="-1"
+    >WARDEX</text>
+  </g>
+
+  <!-- TAGLINE — muted lavender, controlled tracking -->
+  <g id="tagline">
+    <text
+      x="339"
+      y="317"
+      font-family="Arial, Helvetica, sans-serif"
+      font-weight="400"
+      font-size="18"
+      fill="#c4b5fd"
+      letter-spacing="5"
+    >DAO TREASURY INTELLIGENCE</text>
+  </g>
+</svg>

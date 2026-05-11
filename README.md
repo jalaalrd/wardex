@@ -160,12 +160,12 @@ This solves the governance paradox: selling native tokens requires a confidence 
 
 - **Realms SPL Governance integration** — reads real governance accounts and native treasury PDAs from Solana mainnet for all 4 target DAOs
 - **RPC Fast mainnet reads** — all Solana mainnet calls (getMultipleAccountsInfo, getParsedTokenAccountsByOwner, getBalance) routed through RPC Fast for speed and reliability
-- **GoldRush token balances** — real SPL token balances with live USD pricing via Covalent's GoldRush API; replaces estimated ratios when meaningful coverage is detected
-- **Jupiter Lend yield rates** — live JupUSD vault supply rates from Jupiter Lend API alongside Kamino, Marginfi, and Drift; best venue selected automatically
+- **GoldRush token balances** — real SPL token balances with live USD pricing via Covalent's GoldRush API; badge shows live token count (e.g. "◈ GoldRush — 6 tokens"); replaces estimated ratios when coverage is ≥5% of TVL
+- **Jupiter Lend yield rates** — live JupUSD vault supply rates from Jupiter Lend API alongside Kamino, Marginfi, and Drift; all four venues shown as a pill comparison; best venue selected automatically
 - **Historical TVL trend analysis** — 30d/90d % change and daily slope computed from DefiLlama's historical TVL array; displayed as a directional indicator in the stats grid
 - **Multi-scenario bear market modelling** — three named scenarios (Base −40%, Moderate −60%, Severe −80%) replace the single 70% estimate, shown side-by-side in the risk card
 - **Claude API governance proposals** — `POST /api/agent/proposal` calls Claude Haiku to generate a fully-formed Realms governance proposal from live treasury data; structured template fallback when API key is absent
-- **SNS agent identity** — `wardex-agent.sol` embedded in every Memo program transaction; `/api/agent/identity` endpoint exposes the agent's verifiable Solana Name Service identity
+- **SNS agent identity** — `wardex-agent.sol` registered on Solana mainnet via `@bonfida/spl-name-service`; SOL record verified on-chain to the agent pubkey (`47fyhXGzqw2SvATDVLqDNZNNcsMNVnMWCG3B8H4UCitF`); `/api/agent/identity` returns live registration status (`snsRegistered`, `snsAgentMatch`) and embeds the domain in every Memo program transaction
 - **Real devnet execution** — agent broadcasts a verifiable Solana devnet transaction via Memo program; returns a real Solana Explorer link
 - Risk score 0–100 with native token concentration analysis
 - Runway estimation scaled by treasury size and burn rate
@@ -440,7 +440,7 @@ Wardex integrates four sponsor stacks as core infrastructure, each solving a rea
 | **RPC Fast** | RPC Fast | High-performance Solana mainnet RPC — all treasury reads route through `solana-rpc.rpcfast.com` when `RPCFAST_API_KEY` is set | All `/api/treasury/*` reads |
 | **Not Your Regular Bounty** | Jupiter | Jupiter Lend API (`api.jup.ag/lend/v1/earn/tokens`) — live JupUSD vault APY as an additional yield deployment venue. See [JUPITER_DX_REPORT.md](./JUPITER_DX_REPORT.md) for full integration notes. | `/api/yield/rates` → `jupiter_lend_usdc` |
 | **Build with GoldRush** | Covalent | GoldRush Balances API (`api.covalenthq.com/v1/solana-mainnet/...`) — real on-chain SPL token balances with live USD pricing for treasury PDAs | `/api/treasury/:protocol` → `goldRushConnected` |
-| **SNS Identity** | Bonfida | `wardex-agent.sol` embedded in every Memo program transaction; `/api/agent/identity` exposes the agent's SNS domain and verify link | `/api/agent/identity` |
+| **SNS Identity** | Bonfida | `wardex-agent.sol` registered on Solana mainnet; SOL record verified on-chain to agent pubkey via `getDomainKeySync` + `NameRegistryState.retrieve` + `resolve()`; `/api/agent/identity` returns live `snsRegistered` and `snsAgentMatch` fields | `/api/agent/identity` |
 | **Claude API** | Anthropic | `claude-haiku-4-5` generates Realms-ready governance proposals from live treasury analysis data; structured template fallback when key absent | `POST /api/agent/proposal` |
 
 
